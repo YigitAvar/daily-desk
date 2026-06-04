@@ -4,6 +4,7 @@
   todayCount,
   backlogCount,
   completedCount,
+  highPriorityTodayCount,
 }) {
   return (
     <aside className="sidebar">
@@ -22,6 +23,11 @@
         <span>Backlog</span>
         <strong>{backlogCount}</strong>
       </button>
+
+      <div className="mini-card">
+        <span>High Priority</span>
+        <strong>{highPriorityTodayCount}</strong>
+      </div>
 
       <div className="mini-card">
         <span>Completed</span>

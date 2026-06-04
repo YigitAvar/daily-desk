@@ -8,9 +8,17 @@ import TaskList from "./components/TaskList";
 
 const STORAGE_KEY = "daily-desk-tasks";
 
+function normalizeTasks(tasks) {
+  return tasks.map((task) => ({
+    ...task,
+    category: task.category || "personal",
+    priority: task.priority || "medium",
+  }));
+}
+
 function App() {
   const [tasks, setTasks] = useState(() => {
-    return loadTasks(STORAGE_KEY, initialTasks);
+    return normalizeTasks(loadTasks(STORAGE_KEY, initialTasks));
   });
 
   const [activeView, setActiveView] = useState("today");
@@ -20,11 +28,13 @@ function App() {
     saveTasks(STORAGE_KEY, nextTasks);
   }
 
-  function addTask(text) {
+  function addTask(taskData) {
     const newTask = {
       id: crypto.randomUUID(),
-      text,
+      text: taskData.text,
       status: activeView,
+      category: taskData.category,
+      priority: taskData.priority,
       completed: false,
       createdAt: new Date().toISOString(),
       completedAt: null,
@@ -40,6 +50,21 @@ function App() {
             ...task,
             completed: true,
             completedAt: new Date().toISOString(),
+          }
+        : task
+    );
+
+    updateTasks(nextTasks);
+  }
+
+  function updateTask(taskId, updatedData) {
+    const nextTasks = tasks.map((task) =>
+      task.id === taskId
+        ? {
+            ...task,
+            text: updatedData.text,
+            category: updatedData.category,
+            priority: updatedData.priority,
           }
         : task
     );
@@ -100,6 +125,11 @@ function App() {
     [tasks]
   );
 
+  const highPriorityTodayCount = useMemo(
+    () => todayTasks.filter((task) => task.priority === "high").length,
+    [todayTasks]
+  );
+
   const visibleTasks = activeView === "today" ? todayTasks : backlogTasks;
 
   return (
@@ -113,6 +143,7 @@ function App() {
           todayCount={todayTasks.length}
           backlogCount={backlogTasks.length}
           completedCount={completedTasks.length}
+          highPriorityTodayCount={highPriorityTodayCount}
         />
 
         <section className="task-panel">
@@ -132,6 +163,7 @@ function App() {
             tasks={visibleTasks}
             completedTasks={completedTasks}
             onCompleteTask={completeTask}
+            onUpdateTask={updateTask}
             onMoveTask={moveTask}
             onDeleteTask={deleteTask}
           />

@@ -1,11 +1,53 @@
-﻿function TaskList({
+﻿import { useState } from "react";
+import {
+  categories,
+  priorities,
+  getCategoryLabel,
+  getPriorityLabel,
+} from "../data/options";
+
+function TaskList({
   activeView,
   tasks,
   completedTasks,
   onCompleteTask,
+  onUpdateTask,
   onMoveTask,
   onDeleteTask,
 }) {
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [editText, setEditText] = useState("");
+  const [editCategory, setEditCategory] = useState("personal");
+  const [editPriority, setEditPriority] = useState("medium");
+
+  function startEditing(task) {
+    setEditingTaskId(task.id);
+    setEditText(task.text);
+    setEditCategory(task.category || "personal");
+    setEditPriority(task.priority || "medium");
+  }
+
+  function cancelEditing() {
+    setEditingTaskId(null);
+    setEditText("");
+    setEditCategory("personal");
+    setEditPriority("medium");
+  }
+
+  function saveEditing(taskId) {
+    const trimmedText = editText.trim();
+
+    if (!trimmedText) return;
+
+    onUpdateTask(taskId, {
+      text: trimmedText,
+      category: editCategory,
+      priority: editPriority,
+    });
+
+    cancelEditing();
+  }
+
   return (
     <>
       <div className="task-list">
@@ -16,33 +58,89 @@
               : "Backlog boş. Güzel, kafan temiz."}
           </div>
         ) : (
-          tasks.map((task) => (
-            <article className="task-card" key={task.id}>
-              <button
-                className="check-button"
-                onClick={() => onCompleteTask(task.id)}
-                aria-label="Complete task"
-              >
-                ✓
-              </button>
+          tasks.map((task) => {
+            const isEditing = editingTaskId === task.id;
 
-              <p>{task.text}</p>
+            return (
+              <article className="task-card" key={task.id}>
+                {isEditing ? (
+                  <div className="edit-task-box">
+                    <input
+                      value={editText}
+                      onChange={(event) => setEditText(event.target.value)}
+                    />
 
-              <div className="task-actions">
-                {activeView === "today" ? (
-                  <button onClick={() => onMoveTask(task.id, "backlog")}>
-                    Backlog
-                  </button>
+                    <div className="edit-controls">
+                      <select
+                        value={editCategory}
+                        onChange={(event) => setEditCategory(event.target.value)}
+                      >
+                        {categories.map((item) => (
+                          <option key={item.value} value={item.value}>
+                            {item.label}
+                          </option>
+                        ))}
+                      </select>
+
+                      <select
+                        value={editPriority}
+                        onChange={(event) => setEditPriority(event.target.value)}
+                      >
+                        {priorities.map((item) => (
+                          <option key={item.value} value={item.value}>
+                            {item.label}
+                          </option>
+                        ))}
+                      </select>
+
+                      <button onClick={() => saveEditing(task.id)}>Kaydet</button>
+                      <button onClick={cancelEditing}>Vazgeç</button>
+                    </div>
+                  </div>
                 ) : (
-                  <button onClick={() => onMoveTask(task.id, "today")}>
-                    Today
-                  </button>
-                )}
+                  <>
+                    <button
+                      className="check-button"
+                      onClick={() => onCompleteTask(task.id)}
+                      aria-label="Complete task"
+                    >
+                      ✓
+                    </button>
 
-                <button onClick={() => onDeleteTask(task.id)}>Sil</button>
-              </div>
-            </article>
-          ))
+                    <div className="task-content">
+                      <p>{task.text}</p>
+
+                      <div className="task-meta">
+                        <span className="badge category-badge">
+                          {getCategoryLabel(task.category)}
+                        </span>
+
+                        <span className={`badge priority-badge ${task.priority}`}>
+                          {getPriorityLabel(task.priority)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="task-actions">
+                      <button onClick={() => startEditing(task)}>Düzenle</button>
+
+                      {activeView === "today" ? (
+                        <button onClick={() => onMoveTask(task.id, "backlog")}>
+                          Backlog
+                        </button>
+                      ) : (
+                        <button onClick={() => onMoveTask(task.id, "today")}>
+                          Today
+                        </button>
+                      )}
+
+                      <button onClick={() => onDeleteTask(task.id)}>Sil</button>
+                    </div>
+                  </>
+                )}
+              </article>
+            );
+          })
         )}
       </div>
 
@@ -52,7 +150,20 @@
 
           {completedTasks.map((task) => (
             <article className="task-card completed" key={task.id}>
-              <p>{task.text}</p>
+              <div>
+                <p>{task.text}</p>
+
+                <div className="task-meta">
+                  <span className="badge category-badge">
+                    {getCategoryLabel(task.category)}
+                  </span>
+
+                  <span className={`badge priority-badge ${task.priority}`}>
+                    {getPriorityLabel(task.priority)}
+                  </span>
+                </div>
+              </div>
+
               <button onClick={() => onDeleteTask(task.id)}>Sil</button>
             </article>
           ))}
