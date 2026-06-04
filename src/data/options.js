@@ -1,14 +1,12 @@
 ﻿export const categories = [
   { value: "work", label: "İş" },
-  { value: "school", label: "Okul" },
-  { value: "sport", label: "Spor" },
   { value: "personal", label: "Kişisel" },
 ];
 
 export const priorities = [
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
+  { value: "low", label: "Düşük" },
+  { value: "medium", label: "Orta" },
+  { value: "high", label: "Yüksek" },
 ];
 
 export function getCategoryLabel(value) {
@@ -16,5 +14,5 @@ export function getCategoryLabel(value) {
 }
 
 export function getPriorityLabel(value) {
-  return priorities.find((priority) => priority.value === value)?.label || "Medium";
+  return priorities.find((priority) => priority.value === value)?.label || "Orta";
 }

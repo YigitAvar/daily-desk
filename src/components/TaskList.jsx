@@ -1,10 +1,5 @@
 ﻿import { useState } from "react";
-import {
-  categories,
-  priorities,
-  getCategoryLabel,
-  getPriorityLabel,
-} from "../data/options";
+import { priorities, getCategoryLabel, getPriorityLabel } from "../data/options";
 
 function TaskList({
   activeView,
@@ -17,20 +12,17 @@ function TaskList({
 }) {
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editText, setEditText] = useState("");
-  const [editCategory, setEditCategory] = useState("personal");
   const [editPriority, setEditPriority] = useState("medium");
 
   function startEditing(task) {
     setEditingTaskId(task.id);
     setEditText(task.text);
-    setEditCategory(task.category || "personal");
     setEditPriority(task.priority || "medium");
   }
 
   function cancelEditing() {
     setEditingTaskId(null);
     setEditText("");
-    setEditCategory("personal");
     setEditPriority("medium");
   }
 
@@ -41,7 +33,6 @@ function TaskList({
 
     onUpdateTask(taskId, {
       text: trimmedText,
-      category: editCategory,
       priority: editPriority,
     });
 
@@ -54,7 +45,7 @@ function TaskList({
         {tasks.length === 0 ? (
           <div className="empty-state">
             {activeView === "today"
-              ? "Bugün için görev yok. Ama 15 tane de ekleme; 3-5 net görev yeter."
+              ? "Bugün için görev yok. 3-5 net görev yeter."
               : "Backlog boş. Güzel, kafan temiz."}
           </div>
         ) : (
@@ -71,17 +62,6 @@ function TaskList({
                     />
 
                     <div className="edit-controls">
-                      <select
-                        value={editCategory}
-                        onChange={(event) => setEditCategory(event.target.value)}
-                      >
-                        {categories.map((item) => (
-                          <option key={item.value} value={item.value}>
-                            {item.label}
-                          </option>
-                        ))}
-                      </select>
-
                       <select
                         value={editPriority}
                         onChange={(event) => setEditPriority(event.target.value)}

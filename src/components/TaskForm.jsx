@@ -1,9 +1,8 @@
 ﻿import { useState } from "react";
-import { categories, priorities } from "../data/options";
+import { priorities } from "../data/options";
 
-function TaskForm({ activeView, onAddTask }) {
+function TaskForm({ activeView, activeArea, onAddTask }) {
   const [taskText, setTaskText] = useState("");
-  const [category, setCategory] = useState("personal");
   const [priority, setPriority] = useState("medium");
 
   function handleSubmit(event) {
@@ -15,7 +14,6 @@ function TaskForm({ activeView, onAddTask }) {
 
     onAddTask({
       text: trimmedText,
-      category,
       priority,
     });
 
@@ -28,19 +26,15 @@ function TaskForm({ activeView, onAddTask }) {
         value={taskText}
         onChange={(event) => setTaskText(event.target.value)}
         placeholder={
-          activeView === "today"
-            ? "Bugün yapılacak bir görev yaz..."
-            : "Sonra bakılacak bir görev yaz..."
+          activeArea === "work"
+            ? activeView === "today"
+              ? "Bugünkü iş görevini yaz..."
+              : "Sonra bakılacak iş görevini yaz..."
+            : activeView === "today"
+              ? "Bugünkü kişisel görevini yaz..."
+              : "Sonra bakılacak kişisel görevini yaz..."
         }
       />
-
-      <select value={category} onChange={(event) => setCategory(event.target.value)}>
-        {categories.map((item) => (
-          <option key={item.value} value={item.value}>
-            {item.label}
-          </option>
-        ))}
-      </select>
 
       <select value={priority} onChange={(event) => setPriority(event.target.value)}>
         {priorities.map((item) => (

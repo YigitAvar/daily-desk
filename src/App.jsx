@@ -2,16 +2,17 @@
 import { initialTasks } from "./data/initialTasks";
 import { loadTasks, saveTasks } from "./utils/storage";
 import Header from "./components/Header";
-import Sidebar from "./components/Sidebar";
-import TaskForm from "./components/TaskForm";
-import TaskList from "./components/TaskList";
+import DeskColumn from "./components/DeskColumn";
 
 const STORAGE_KEY = "daily-desk-tasks";
 
 function normalizeTasks(tasks) {
   return tasks.map((task) => ({
     ...task,
-    category: task.category || "personal",
+    category:
+      task.category === "school" || task.category === "sport"
+        ? "personal"
+        : task.category || "personal",
     priority: task.priority || "medium",
   }));
 }
@@ -21,19 +22,17 @@ function App() {
     return normalizeTasks(loadTasks(STORAGE_KEY, initialTasks));
   });
 
-  const [activeView, setActiveView] = useState("today");
-
   function updateTasks(nextTasks) {
     setTasks(nextTasks);
     saveTasks(STORAGE_KEY, nextTasks);
   }
 
-  function addTask(taskData) {
+  function addTask(category, status, taskData) {
     const newTask = {
       id: crypto.randomUUID(),
       text: taskData.text,
-      status: activeView,
-      category: taskData.category,
+      status,
+      category,
       priority: taskData.priority,
       completed: false,
       createdAt: new Date().toISOString(),
@@ -63,7 +62,6 @@ function App() {
         ? {
             ...task,
             text: updatedData.text,
-            category: updatedData.category,
             priority: updatedData.priority,
           }
         : task
@@ -110,64 +108,44 @@ function App() {
     updateTasks(nextTasks);
   }
 
-  const todayTasks = useMemo(
-    () => tasks.filter((task) => task.status === "today" && !task.completed),
+  const workTasks = useMemo(
+    () => tasks.filter((task) => task.category === "work"),
     [tasks]
   );
 
-  const backlogTasks = useMemo(
-    () => tasks.filter((task) => task.status === "backlog" && !task.completed),
+  const personalTasks = useMemo(
+    () => tasks.filter((task) => task.category === "personal"),
     [tasks]
   );
-
-  const completedTasks = useMemo(
-    () => tasks.filter((task) => task.completed),
-    [tasks]
-  );
-
-  const highPriorityTodayCount = useMemo(
-    () => todayTasks.filter((task) => task.priority === "high").length,
-    [todayTasks]
-  );
-
-  const visibleTasks = activeView === "today" ? todayTasks : backlogTasks;
 
   return (
     <main className="app-shell">
       <Header onCloseDay={closeDay} />
 
-      <section className="dashboard">
-        <Sidebar
-          activeView={activeView}
-          setActiveView={setActiveView}
-          todayCount={todayTasks.length}
-          backlogCount={backlogTasks.length}
-          completedCount={completedTasks.length}
-          highPriorityTodayCount={highPriorityTodayCount}
+      <section className="dual-desk-layout">
+        <DeskColumn
+          title="İş"
+          subtitle="Ticket, kurulum, mail, teknik takip"
+          category="work"
+          tasks={workTasks}
+          onAddTask={addTask}
+          onCompleteTask={completeTask}
+          onUpdateTask={updateTask}
+          onMoveTask={moveTask}
+          onDeleteTask={deleteTask}
         />
 
-        <section className="task-panel">
-          <div className="panel-header">
-            <div>
-              <p className="eyebrow">
-                {activeView === "today" ? "Focus Mode" : "Later Pool"}
-              </p>
-              <h2>{activeView === "today" ? "Today" : "Backlog"}</h2>
-            </div>
-          </div>
-
-          <TaskForm activeView={activeView} onAddTask={addTask} />
-
-          <TaskList
-            activeView={activeView}
-            tasks={visibleTasks}
-            completedTasks={completedTasks}
-            onCompleteTask={completeTask}
-            onUpdateTask={updateTask}
-            onMoveTask={moveTask}
-            onDeleteTask={deleteTask}
-          />
-        </section>
+        <DeskColumn
+          title="Kişisel"
+          subtitle="Spor, kariyer, proje, özel işler"
+          category="personal"
+          tasks={personalTasks}
+          onAddTask={addTask}
+          onCompleteTask={completeTask}
+          onUpdateTask={updateTask}
+          onMoveTask={moveTask}
+          onDeleteTask={deleteTask}
+        />
       </section>
     </main>
   );

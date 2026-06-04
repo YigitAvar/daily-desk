@@ -1,4 +1,6 @@
 ﻿function Sidebar({
+  activeArea,
+  setActiveArea,
   activeView,
   setActiveView,
   todayCount,
@@ -8,6 +10,24 @@
 }) {
   return (
     <aside className="sidebar">
+      <div className="area-switcher">
+        <button
+          className={activeArea === "work" ? "area-button active" : "area-button"}
+          onClick={() => setActiveArea("work")}
+        >
+          İş
+        </button>
+
+        <button
+          className={
+            activeArea === "personal" ? "area-button active" : "area-button"
+          }
+          onClick={() => setActiveArea("personal")}
+        >
+          Kişisel
+        </button>
+      </div>
+
       <button
         className={activeView === "today" ? "nav-button active" : "nav-button"}
         onClick={() => setActiveView("today")}
