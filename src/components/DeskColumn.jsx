@@ -8,7 +8,11 @@ function PriorityPicker({ value, onChange, compact = false }) {
         <button
           key={item.value}
           type="button"
-          className={value === item.value ? `priority-option active ${item.value}` : `priority-option ${item.value}`}
+          className={
+            value === item.value
+              ? `priority-option active ${item.value}`
+              : `priority-option ${item.value}`
+          }
           onClick={() => onChange(item.value)}
         >
           {item.label}
@@ -28,6 +32,7 @@ function DeskColumn({
   onUpdateTask,
   onMoveTask,
   onDeleteTask,
+  onClearCompletedTasks,
 }) {
   const [taskText, setTaskText] = useState("");
   const [priority, setPriority] = useState("medium");
@@ -35,6 +40,7 @@ function DeskColumn({
   const [editText, setEditText] = useState("");
   const [editPriority, setEditPriority] = useState("medium");
   const [showBacklog, setShowBacklog] = useState(true);
+  const [showAllCompleted, setShowAllCompleted] = useState(false);
 
   const todayTasks = useMemo(
     () => tasks.filter((task) => task.status === "today" && !task.completed),
@@ -47,9 +53,16 @@ function DeskColumn({
   );
 
   const completedTasks = useMemo(
-    () => tasks.filter((task) => task.completed),
+    () =>
+      tasks
+        .filter((task) => task.completed)
+        .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt)),
     [tasks]
   );
+
+  const visibleCompletedTasks = showAllCompleted
+    ? completedTasks
+    : completedTasks.slice(0, 2);
 
   const highPriorityCount = useMemo(
     () => todayTasks.filter((task) => task.priority === "high").length,
@@ -164,7 +177,9 @@ function DeskColumn({
     <section className="desk-column">
       <div className="desk-column-header">
         <div>
-          <p className="eyebrow">{category === "work" ? "Work Desk" : "Personal Desk"}</p>
+          <p className="eyebrow">
+            {category === "work" ? "Work Desk" : "Personal Desk"}
+          </p>
           <h2>{title}</h2>
           <p>{subtitle}</p>
         </div>
@@ -180,11 +195,7 @@ function DeskColumn({
         <input
           value={taskText}
           onChange={(event) => setTaskText(event.target.value)}
-          placeholder={
-            category === "work"
-              ? "İş görevi yaz..."
-              : "Kişisel görev yaz..."
-          }
+          placeholder={category === "work" ? "İş görevi yaz..." : "Kişisel görev yaz..."}
         />
 
         <PriorityPicker value={priority} onChange={setPriority} />
@@ -229,13 +240,30 @@ function DeskColumn({
 
       {completedTasks.length > 0 && (
         <div className="column-section completed-compact-section">
-          <div className="column-section-title">
-            <h3>Çizilenler</h3>
-            <span>{completedTasks.length}</span>
+          <div className="completed-header">
+            <div className="column-section-title">
+              <h3>Çizilenler</h3>
+              <span>{completedTasks.length}</span>
+            </div>
+
+            <div className="completed-actions">
+              {completedTasks.length > 2 && (
+                <button onClick={() => setShowAllCompleted((current) => !current)}>
+                  {showAllCompleted ? "Daha Az" : "Tümünü Göster"}
+                </button>
+              )}
+
+              <button
+                className="danger-action"
+                onClick={() => onClearCompletedTasks(category)}
+              >
+                Temizle
+              </button>
+            </div>
           </div>
 
           <div className="compact-task-list">
-            {completedTasks.slice(0, 4).map((task) => (
+            {visibleCompletedTasks.map((task) => (
               <article className="compact-task-card completed" key={task.id}>
                 <div>
                   <p>{task.text}</p>

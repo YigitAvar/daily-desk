@@ -83,6 +83,26 @@ function App() {
     updateTasks(nextTasks);
   }
 
+  function clearCompletedTasks(category) {
+    const completedCount = tasks.filter(
+      (task) => task.category === category && task.completed
+    ).length;
+
+    if (completedCount === 0) return;
+
+    const confirmed = confirm(
+      `${completedCount} çizilen görev temizlenecek. Emin misin?`
+    );
+
+    if (!confirmed) return;
+
+    const nextTasks = tasks.filter(
+      (task) => !(task.category === category && task.completed)
+    );
+
+    updateTasks(nextTasks);
+  }
+
   function closeDay() {
     const unfinishedTodayTasks = tasks.filter(
       (task) => task.status === "today" && !task.completed
@@ -133,6 +153,7 @@ function App() {
           onUpdateTask={updateTask}
           onMoveTask={moveTask}
           onDeleteTask={deleteTask}
+          onClearCompletedTasks={clearCompletedTasks}
         />
 
         <DeskColumn
@@ -145,6 +166,7 @@ function App() {
           onUpdateTask={updateTask}
           onMoveTask={moveTask}
           onDeleteTask={deleteTask}
+          onClearCompletedTasks={clearCompletedTasks}
         />
       </section>
     </main>
