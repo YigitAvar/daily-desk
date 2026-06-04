@@ -3,6 +3,7 @@ import { initialTasks } from "./data/initialTasks";
 import { loadTasks, saveTasks } from "./utils/storage";
 import Header from "./components/Header";
 import DeskColumn from "./components/DeskColumn";
+import CloseDayModal from "./components/CloseDayModal";
 
 const STORAGE_KEY = "daily-desk-tasks";
 
@@ -21,6 +22,8 @@ function App() {
   const [tasks, setTasks] = useState(() => {
     return normalizeTasks(loadTasks(STORAGE_KEY, initialTasks));
   });
+
+  const [isCloseDayModalOpen, setIsCloseDayModalOpen] = useState(false);
 
   function updateTasks(nextTasks) {
     setTasks(nextTasks);
@@ -103,22 +106,15 @@ function App() {
     updateTasks(nextTasks);
   }
 
-  function closeDay() {
-    const unfinishedTodayTasks = tasks.filter(
-      (task) => task.status === "today" && !task.completed
-    );
+  function openCloseDayModal() {
+    setIsCloseDayModalOpen(true);
+  }
 
-    if (unfinishedTodayTasks.length === 0) {
-      alert("Bugün açık görev kalmadı. Temiz kapattın.");
-      return;
-    }
+  function closeCloseDayModal() {
+    setIsCloseDayModalOpen(false);
+  }
 
-    const shouldMoveToBacklog = confirm(
-      `${unfinishedTodayTasks.length} görev bitmedi. Bunları Backlog'a taşıyalım mı?`
-    );
-
-    if (!shouldMoveToBacklog) return;
-
+  function moveUnfinishedTodayTasksToBacklog() {
     const nextTasks = tasks.map((task) =>
       task.status === "today" && !task.completed
         ? { ...task, status: "backlog" }
@@ -126,6 +122,7 @@ function App() {
     );
 
     updateTasks(nextTasks);
+    setIsCloseDayModalOpen(false);
   }
 
   const workTasks = useMemo(
@@ -138,9 +135,25 @@ function App() {
     [tasks]
   );
 
+  const completedTasks = useMemo(
+    () =>
+      tasks
+        .filter((task) => task.completed)
+        .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt)),
+    [tasks]
+  );
+
+  const unfinishedTodayTasks = useMemo(
+    () =>
+      tasks.filter(
+        (task) => task.status === "today" && !task.completed
+      ),
+    [tasks]
+  );
+
   return (
     <main className="app-shell">
-      <Header onCloseDay={closeDay} />
+      <Header onCloseDay={openCloseDayModal} />
 
       <section className="dual-desk-layout">
         <DeskColumn
@@ -169,6 +182,15 @@ function App() {
           onClearCompletedTasks={clearCompletedTasks}
         />
       </section>
+
+      {isCloseDayModalOpen && (
+        <CloseDayModal
+          completedTasks={completedTasks}
+          unfinishedTodayTasks={unfinishedTodayTasks}
+          onClose={closeCloseDayModal}
+          onMoveUnfinishedToBacklog={moveUnfinishedTodayTasksToBacklog}
+        />
+      )}
     </main>
   );
 }
