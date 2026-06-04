@@ -1,4 +1,4 @@
-﻿function Header({ onCloseDay }) {
+﻿function Header({ onCloseDay, onOpenHistory }) {
   return (
     <section className="hero">
       <div>
@@ -9,9 +9,15 @@
         </p>
       </div>
 
-      <button className="close-day-button" onClick={onCloseDay}>
-        Günü Kapat
-      </button>
+      <div className="hero-actions">
+        <button className="history-button" onClick={onOpenHistory}>
+          Geçmiş
+        </button>
+
+        <button className="close-day-button" onClick={onCloseDay}>
+          Günü Kapat
+        </button>
+      </div>
     </section>
   );
 }

@@ -1,4 +1,5 @@
 ﻿function CloseDayModal({
+  mode = "manual",
   completedTasks,
   unfinishedTodayTasks,
   onClose,
@@ -6,16 +7,22 @@
 }) {
   const completedCount = completedTasks.length;
   const unfinishedCount = unfinishedTodayTasks.length;
+  const isAutoMode = mode === "auto";
+  const hasUnfinishedTasks = unfinishedCount > 0;
 
   return (
     <div className="modal-backdrop">
       <section className="close-day-modal">
         <div className="modal-header">
           <div>
-            <p className="eyebrow">Daily Review</p>
-            <h2>Günü Kapat</h2>
+            <p className="eyebrow">
+              {isAutoMode ? "New Day Detected" : "Daily Review"}
+            </p>
+            <h2>{isAutoMode ? "Dünden Kalanlar Var" : "Günü Kapat"}</h2>
             <p>
-              Bugünün durumunu gör, bitmeyenleri Backlog'a taşı ve ekranı temizle.
+              {isAutoMode
+                ? "Yeni gün başladı. Dünden kalan Today görevlerini gözden geçirip günü kaydedebilirsin."
+                : "Bugünün durumunu gör, tamamlananları kaydet ve gerekiyorsa bitmeyenleri Backlog'a taşı."}
             </p>
           </div>
 
@@ -63,7 +70,9 @@
           </div>
 
           {unfinishedCount === 0 ? (
-            <div className="review-empty">Açık Today görevi kalmadı. Güzel kapattın.</div>
+            <div className="review-empty">
+              Açık Today görevi kalmadı. Günü direkt kaydedebilirsin.
+            </div>
           ) : (
             <div className="review-task-list">
               {unfinishedTodayTasks.map((task) => (
@@ -78,15 +87,13 @@
 
         <div className="modal-actions">
           <button className="secondary-action" onClick={onClose}>
-            Vazgeç
+            {isAutoMode ? "Şimdilik Kalsın" : "Vazgeç"}
           </button>
 
-          <button
-            className="primary-action"
-            onClick={onMoveUnfinishedToBacklog}
-            disabled={unfinishedCount === 0}
-          >
-            Bitmeyenleri Backlog'a Taşı
+          <button className="primary-action" onClick={onMoveUnfinishedToBacklog}>
+            {hasUnfinishedTasks
+              ? "Backlog'a Taşı ve Günü Kaydet"
+              : "Günü Kaydet"}
           </button>
         </div>
       </section>

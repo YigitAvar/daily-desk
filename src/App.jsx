@@ -1,11 +1,14 @@
-﻿import { useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { initialTasks } from "./data/initialTasks";
 import { loadTasks, saveTasks } from "./utils/storage";
 import Header from "./components/Header";
 import DeskColumn from "./components/DeskColumn";
 import CloseDayModal from "./components/CloseDayModal";
+import HistoryModal from "./components/HistoryModal";
 
-const STORAGE_KEY = "daily-desk-tasks";
+const TASKS_STORAGE_KEY = "daily-desk-tasks";
+const HISTORY_STORAGE_KEY = "daily-desk-history";
+const LAST_ACTIVE_DATE_KEY = "daily-desk-last-active-date";
 
 function normalizeTasks(tasks) {
   return tasks.map((task) => ({
@@ -18,16 +21,50 @@ function normalizeTasks(tasks) {
   }));
 }
 
+function getDateKey(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function formatDateLabel(date) {
+  return new Intl.DateTimeFormat("tr-TR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatTimeLabel(date) {
+  return new Intl.DateTimeFormat("tr-TR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
 function App() {
   const [tasks, setTasks] = useState(() => {
-    return normalizeTasks(loadTasks(STORAGE_KEY, initialTasks));
+    return normalizeTasks(loadTasks(TASKS_STORAGE_KEY, initialTasks));
+  });
+
+  const [history, setHistory] = useState(() => {
+    return loadTasks(HISTORY_STORAGE_KEY, []);
   });
 
   const [isCloseDayModalOpen, setIsCloseDayModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [closeDayMode, setCloseDayMode] = useState("manual");
 
   function updateTasks(nextTasks) {
     setTasks(nextTasks);
-    saveTasks(STORAGE_KEY, nextTasks);
+    saveTasks(TASKS_STORAGE_KEY, nextTasks);
+  }
+
+  function updateHistory(nextHistory) {
+    setHistory(nextHistory);
+    saveTasks(HISTORY_STORAGE_KEY, nextHistory);
+  }
+
+  function markTodayAsActiveDate() {
+    localStorage.setItem(LAST_ACTIVE_DATE_KEY, getDateKey(new Date()));
   }
 
   function addTask(category, status, taskData) {
@@ -106,22 +143,73 @@ function App() {
     updateTasks(nextTasks);
   }
 
-  function openCloseDayModal() {
+  function openCloseDayModal(mode = "manual") {
+    setCloseDayMode(mode);
     setIsCloseDayModalOpen(true);
   }
 
   function closeCloseDayModal() {
     setIsCloseDayModalOpen(false);
+    markTodayAsActiveDate();
+  }
+
+  function openHistoryModal() {
+    setIsHistoryModalOpen(true);
+  }
+
+  function closeHistoryModal() {
+    setIsHistoryModalOpen(false);
+  }
+
+  function clearHistory() {
+    if (history.length === 0) return;
+
+    const confirmed = confirm("Tüm günlük özet geçmişi silinecek. Emin misin?");
+
+    if (!confirmed) return;
+
+    updateHistory([]);
   }
 
   function moveUnfinishedTodayTasksToBacklog() {
+    const now = new Date();
+
+    const completedSnapshot = completedTasks.map((task) => ({
+      id: task.id,
+      text: task.text,
+      category: task.category,
+      priority: task.priority,
+      completedAt: task.completedAt,
+    }));
+
+    const unfinishedSnapshot = unfinishedTodayTasks.map((task) => ({
+      id: task.id,
+      text: task.text,
+      category: task.category,
+      priority: task.priority,
+      createdAt: task.createdAt,
+    }));
+
+    const daySummary = {
+      id: crypto.randomUUID(),
+      closedAt: now.toISOString(),
+      dateLabel: formatDateLabel(now),
+      closedAtLabel: formatTimeLabel(now),
+      completedTasks: completedSnapshot,
+      unfinishedTasks: unfinishedSnapshot,
+    };
+
+    const nextHistory = [daySummary, ...history];
+
     const nextTasks = tasks.map((task) =>
       task.status === "today" && !task.completed
         ? { ...task, status: "backlog" }
         : task
     );
 
+    updateHistory(nextHistory);
     updateTasks(nextTasks);
+    markTodayAsActiveDate();
     setIsCloseDayModalOpen(false);
   }
 
@@ -144,16 +232,35 @@ function App() {
   );
 
   const unfinishedTodayTasks = useMemo(
-    () =>
-      tasks.filter(
-        (task) => task.status === "today" && !task.completed
-      ),
+    () => tasks.filter((task) => task.status === "today" && !task.completed),
     [tasks]
   );
 
+  useEffect(() => {
+    const todayKey = getDateKey(new Date());
+    const lastActiveDate = localStorage.getItem(LAST_ACTIVE_DATE_KEY);
+
+    if (!lastActiveDate) {
+      localStorage.setItem(LAST_ACTIVE_DATE_KEY, todayKey);
+      return;
+    }
+
+    const hasOpenDailyState =
+      completedTasks.length > 0 || unfinishedTodayTasks.length > 0;
+
+    if (lastActiveDate !== todayKey && hasOpenDailyState) {
+      openCloseDayModal("auto");
+      return;
+    }
+
+    if (lastActiveDate !== todayKey && !hasOpenDailyState) {
+      localStorage.setItem(LAST_ACTIVE_DATE_KEY, todayKey);
+    }
+  }, [completedTasks.length, unfinishedTodayTasks.length]);
+
   return (
     <main className="app-shell">
-      <Header onCloseDay={openCloseDayModal} />
+      <Header onCloseDay={() => openCloseDayModal("manual")} onOpenHistory={openHistoryModal} />
 
       <section className="dual-desk-layout">
         <DeskColumn
@@ -185,10 +292,19 @@ function App() {
 
       {isCloseDayModalOpen && (
         <CloseDayModal
+          mode={closeDayMode}
           completedTasks={completedTasks}
           unfinishedTodayTasks={unfinishedTodayTasks}
           onClose={closeCloseDayModal}
           onMoveUnfinishedToBacklog={moveUnfinishedTodayTasksToBacklog}
+        />
+      )}
+
+      {isHistoryModalOpen && (
+        <HistoryModal
+          history={history}
+          onClose={closeHistoryModal}
+          onClearHistory={clearHistory}
         />
       )}
     </main>
