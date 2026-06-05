@@ -5,6 +5,7 @@ import Header from "./components/Header";
 import DeskColumn from "./components/DeskColumn";
 import CloseDayModal from "./components/CloseDayModal";
 import HistoryModal from "./components/HistoryModal";
+import SettingsModal from "./components/SettingsModal";
 
 const TASKS_STORAGE_KEY = "daily-desk-tasks";
 const HISTORY_STORAGE_KEY = "daily-desk-history";
@@ -51,6 +52,7 @@ function App() {
 
   const [isCloseDayModalOpen, setIsCloseDayModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [closeDayMode, setCloseDayMode] = useState("manual");
 
   function updateTasks(nextTasks) {
@@ -143,6 +145,58 @@ function App() {
     updateTasks(nextTasks);
   }
 
+  function clearAllTasksFromSettings() {
+    if (tasks.length === 0) return;
+
+    const confirmed = confirm("Tüm görevler silinecek. Emin misin?");
+
+    if (!confirmed) return;
+
+    updateTasks([]);
+  }
+
+  function clearCompletedTasksFromSettings() {
+    const completedCount = tasks.filter((task) => task.completed).length;
+
+    if (completedCount === 0) return;
+
+    const confirmed = confirm(
+      `${completedCount} çizilen görev silinecek. Emin misin?`
+    );
+
+    if (!confirmed) return;
+
+    updateTasks(tasks.filter((task) => !task.completed));
+  }
+
+  function clearHistory() {
+    if (history.length === 0) return;
+
+    const confirmed = confirm("Tüm günlük özet geçmişi silinecek. Emin misin?");
+
+    if (!confirmed) return;
+
+    updateHistory([]);
+  }
+
+  function resetApp() {
+    const confirmed = confirm(
+      "Uygulama tamamen sıfırlanacak. Tüm görevler, geçmiş ve günlük takip bilgisi silinecek. Emin misin?"
+    );
+
+    if (!confirmed) return;
+
+    localStorage.removeItem(TASKS_STORAGE_KEY);
+    localStorage.removeItem(HISTORY_STORAGE_KEY);
+    localStorage.removeItem(LAST_ACTIVE_DATE_KEY);
+
+    setTasks([]);
+    setHistory([]);
+    setIsSettingsModalOpen(false);
+    setIsHistoryModalOpen(false);
+    setIsCloseDayModalOpen(false);
+  }
+
   function openCloseDayModal(mode = "manual") {
     setCloseDayMode(mode);
     setIsCloseDayModalOpen(true);
@@ -161,14 +215,12 @@ function App() {
     setIsHistoryModalOpen(false);
   }
 
-  function clearHistory() {
-    if (history.length === 0) return;
+  function openSettingsModal() {
+    setIsSettingsModalOpen(true);
+  }
 
-    const confirmed = confirm("Tüm günlük özet geçmişi silinecek. Emin misin?");
-
-    if (!confirmed) return;
-
-    updateHistory([]);
+  function closeSettingsModal() {
+    setIsSettingsModalOpen(false);
   }
 
   function moveUnfinishedTodayTasksToBacklog() {
@@ -260,7 +312,11 @@ function App() {
 
   return (
     <main className="app-shell">
-      <Header onCloseDay={() => openCloseDayModal("manual")} onOpenHistory={openHistoryModal} />
+      <Header
+        onCloseDay={() => openCloseDayModal("manual")}
+        onOpenHistory={openHistoryModal}
+        onOpenSettings={openSettingsModal}
+      />
 
       <section className="dual-desk-layout">
         <DeskColumn
@@ -305,6 +361,19 @@ function App() {
           history={history}
           onClose={closeHistoryModal}
           onClearHistory={clearHistory}
+        />
+      )}
+
+      {isSettingsModalOpen && (
+        <SettingsModal
+          taskCount={tasks.length}
+          completedCount={completedTasks.length}
+          historyCount={history.length}
+          onClose={closeSettingsModal}
+          onClearAllTasks={clearAllTasksFromSettings}
+          onClearCompletedTasks={clearCompletedTasksFromSettings}
+          onClearHistory={clearHistory}
+          onResetApp={resetApp}
         />
       )}
     </main>

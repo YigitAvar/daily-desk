@@ -1074,3 +1074,94 @@ h1 {
   background: rgba(255, 107, 107, 0.08);
   color: #ff9a9a;
 }
+
+/* Settings modal */
+
+.settings-modal {
+  width: min(780px, 100%);
+}
+
+.settings-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.settings-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+  align-items: center;
+  border: 1px solid rgba(244, 241, 234, 0.1);
+  border-radius: 20px;
+  padding: 16px;
+  background: rgba(17, 17, 17, 0.38);
+}
+
+.settings-card h3 {
+  margin-bottom: 6px;
+  color: #f4f1ea;
+  font-size: 17px;
+}
+
+.settings-card p {
+  margin-bottom: 8px;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.settings-card span {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: rgba(244, 241, 234, 0.08);
+  color: #d8d0c1;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.settings-card button {
+  border: 1px solid rgba(244, 241, 234, 0.12);
+  border-radius: 999px;
+  padding: 10px 13px;
+  background: rgba(244, 241, 234, 0.08);
+  color: #d8d0c1;
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.settings-card button:hover {
+  background: rgba(244, 241, 234, 0.13);
+}
+
+.settings-card.danger-zone {
+  border-color: rgba(255, 107, 107, 0.2);
+  background: rgba(255, 107, 107, 0.055);
+}
+
+.settings-card.danger-zone span {
+  background: rgba(255, 107, 107, 0.1);
+  color: #ff9a9a;
+}
+
+.settings-card.danger-zone button {
+  border-color: rgba(255, 107, 107, 0.2);
+  background: rgba(255, 107, 107, 0.1);
+  color: #ff9a9a;
+}
+
+.settings-card.danger-zone button:hover {
+  background: rgba(255, 107, 107, 0.16);
+}
+
+@media (max-width: 720px) {
+  .settings-card {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-card button {
+    width: 100%;
+  }
+}
