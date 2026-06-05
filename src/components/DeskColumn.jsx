@@ -1,6 +1,10 @@
 ﻿import { useMemo, useState } from "react";
 import { priorities, getPriorityLabel } from "../data/options";
 
+const TODAY_TASK_LIMIT = 5;
+const MIN_TASK_LENGTH = 3;
+const LONG_TASK_LENGTH = 80;
+
 function PriorityPicker({ value, onChange, compact = false }) {
   return (
     <div className={compact ? "priority-picker compact" : "priority-picker"}>
@@ -41,6 +45,7 @@ function DeskColumn({
   const [editPriority, setEditPriority] = useState("medium");
   const [showBacklog, setShowBacklog] = useState(true);
   const [showAllCompleted, setShowAllCompleted] = useState(false);
+  const [formMessage, setFormMessage] = useState(null);
 
   const todayTasks = useMemo(
     () => tasks.filter((task) => task.status === "today" && !task.completed),
@@ -69,19 +74,73 @@ function DeskColumn({
     [todayTasks]
   );
 
+  function normalizeText(text) {
+    return text.trim().replace(/\s+/g, " ");
+  }
+
+  function clearFormMessageSoon() {
+    window.setTimeout(() => {
+      setFormMessage(null);
+    }, 3500);
+  }
+
+  function showMessage(type, text) {
+    setFormMessage({ type, text });
+    clearFormMessageSoon();
+  }
+
+  function hasDuplicateActiveTask(text) {
+    const normalizedNewText = text.toLocaleLowerCase("tr-TR");
+
+    return tasks.some((task) => {
+      const normalizedTaskText = task.text
+        .trim()
+        .replace(/\s+/g, " ")
+        .toLocaleLowerCase("tr-TR");
+
+      return !task.completed && normalizedTaskText === normalizedNewText;
+    });
+  }
+
   function handleSubmit(event) {
     event.preventDefault();
 
-    const trimmedText = taskText.trim();
+    const normalizedTaskText = normalizeText(taskText);
 
-    if (!trimmedText) return;
+    if (normalizedTaskText.length < MIN_TASK_LENGTH) {
+      showMessage("error", "Görev en az 3 karakter olmalı. 'a' gibi test görevleri listeyi kirletir.");
+      return;
+    }
+
+    if (hasDuplicateActiveTask(normalizedTaskText)) {
+      showMessage("error", "Bu görev zaten aktif listede var. Aynısını tekrar eklemeyelim.");
+      return;
+    }
+
+    if (todayTasks.length >= TODAY_TASK_LIMIT) {
+      const confirmed = confirm(
+        `Today listesinde zaten ${todayTasks.length} görev var. Bu gerçekçi olmayabilir. Yine de eklemek istiyor musun?`
+      );
+
+      if (!confirmed) {
+        showMessage("warning", "Mantıklı karar. Bugünlük listeyi şişirmemek daha iyi.");
+        return;
+      }
+    }
 
     onAddTask(category, "today", {
-      text: trimmedText,
+      text: normalizedTaskText,
       priority,
     });
 
     setTaskText("");
+
+    if (normalizedTaskText.length > LONG_TASK_LENGTH) {
+      showMessage("warning", "Bu görev biraz büyük görünüyor. Gerekirse daha küçük parçalara böl.");
+      return;
+    }
+
+    showMessage("success", "Görev eklendi.");
   }
 
   function startEditing(task) {
@@ -97,9 +156,12 @@ function DeskColumn({
   }
 
   function saveEditing(taskId) {
-    const trimmedText = editText.trim();
+    const trimmedText = normalizeText(editText);
 
-    if (!trimmedText) return;
+    if (trimmedText.length < MIN_TASK_LENGTH) {
+      showMessage("error", "Düzenlenen görev en az 3 karakter olmalı.");
+      return;
+    }
 
     onUpdateTask(taskId, {
       text: trimmedText,
@@ -202,6 +264,18 @@ function DeskColumn({
 
         <button type="submit">Ekle</button>
       </form>
+
+      {formMessage && (
+        <div className={`form-message ${formMessage.type}`}>
+          {formMessage.text}
+        </div>
+      )}
+
+      {todayTasks.length >= TODAY_TASK_LIMIT && (
+        <div className="daily-limit-warning">
+          Today listesinde {todayTasks.length} görev var. Bugünlük planı sade tutmak daha mantıklı olabilir.
+        </div>
+      )}
 
       <div className="column-section">
         <div className="column-section-title">

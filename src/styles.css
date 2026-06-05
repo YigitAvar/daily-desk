@@ -1042,3 +1042,35 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+/* Form validation messages */
+
+.form-message,
+.daily-limit-warning {
+  margin-top: -12px;
+  margin-bottom: 18px;
+  border-radius: 16px;
+  padding: 11px 13px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.form-message.success {
+  border: 1px solid rgba(157, 218, 165, 0.18);
+  background: rgba(157, 218, 165, 0.08);
+  color: #9ddaa5;
+}
+
+.form-message.warning,
+.daily-limit-warning {
+  border: 1px solid rgba(217, 199, 163, 0.2);
+  background: rgba(217, 199, 163, 0.08);
+  color: #dcc79a;
+}
+
+.form-message.error {
+  border: 1px solid rgba(255, 107, 107, 0.2);
+  background: rgba(255, 107, 107, 0.08);
+  color: #ff9a9a;
+}
