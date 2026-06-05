@@ -4,6 +4,8 @@ import { priorities, getPriorityLabel } from "../data/options";
 const TODAY_TASK_LIMIT = 5;
 const MIN_TASK_LENGTH = 3;
 const LONG_TASK_LENGTH = 80;
+const BACKLOG_WARNING_DAYS = 3;
+const BACKLOG_DANGER_DAYS = 7;
 
 function PriorityPicker({ value, onChange, compact = false }) {
   return (
@@ -24,6 +26,29 @@ function PriorityPicker({ value, onChange, compact = false }) {
       ))}
     </div>
   );
+}
+
+function normalizeText(text) {
+  return text.trim().replace(/\s+/g, " ");
+}
+
+function getDaysWaiting(task) {
+  const referenceDate = task.movedToBacklogAt || task.createdAt;
+
+  if (!referenceDate) return 0;
+
+  const created = new Date(referenceDate);
+  const now = new Date();
+  const diffMs = now.getTime() - created.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  return Math.max(diffDays, 0);
+}
+
+function getBacklogAgeLevel(daysWaiting) {
+  if (daysWaiting >= BACKLOG_DANGER_DAYS) return "danger";
+  if (daysWaiting >= BACKLOG_WARNING_DAYS) return "warning";
+  return "normal";
 }
 
 function DeskColumn({
@@ -53,7 +78,10 @@ function DeskColumn({
   );
 
   const backlogTasks = useMemo(
-    () => tasks.filter((task) => task.status === "backlog" && !task.completed),
+    () =>
+      tasks
+        .filter((task) => task.status === "backlog" && !task.completed)
+        .sort((a, b) => getDaysWaiting(b) - getDaysWaiting(a)),
     [tasks]
   );
 
@@ -74,9 +102,12 @@ function DeskColumn({
     [todayTasks]
   );
 
-  function normalizeText(text) {
-    return text.trim().replace(/\s+/g, " ");
-  }
+  const agedBacklogCount = useMemo(
+    () =>
+      backlogTasks.filter((task) => getDaysWaiting(task) >= BACKLOG_WARNING_DAYS)
+        .length,
+    [backlogTasks]
+  );
 
   function clearFormMessageSoon() {
     window.setTimeout(() => {
@@ -108,12 +139,18 @@ function DeskColumn({
     const normalizedTaskText = normalizeText(taskText);
 
     if (normalizedTaskText.length < MIN_TASK_LENGTH) {
-      showMessage("error", "Görev en az 3 karakter olmalı. 'a' gibi test görevleri listeyi kirletir.");
+      showMessage(
+        "error",
+        "Görev en az 3 karakter olmalı. 'a' gibi test görevleri listeyi kirletir."
+      );
       return;
     }
 
     if (hasDuplicateActiveTask(normalizedTaskText)) {
-      showMessage("error", "Bu görev zaten aktif listede var. Aynısını tekrar eklemeyelim.");
+      showMessage(
+        "error",
+        "Bu görev zaten aktif listede var. Aynısını tekrar eklemeyelim."
+      );
       return;
     }
 
@@ -123,7 +160,10 @@ function DeskColumn({
       );
 
       if (!confirmed) {
-        showMessage("warning", "Mantıklı karar. Bugünlük listeyi şişirmemek daha iyi.");
+        showMessage(
+          "warning",
+          "Mantıklı karar. Bugünlük listeyi şişirmemek daha iyi."
+        );
         return;
       }
     }
@@ -136,7 +176,10 @@ function DeskColumn({
     setTaskText("");
 
     if (normalizedTaskText.length > LONG_TASK_LENGTH) {
-      showMessage("warning", "Bu görev biraz büyük görünüyor. Gerekirse daha küçük parçalara böl.");
+      showMessage(
+        "warning",
+        "Bu görev biraz büyük görünüyor. Gerekirse daha küçük parçalara böl."
+      );
       return;
     }
 
@@ -171,8 +214,39 @@ function DeskColumn({
     cancelEditing();
   }
 
+  function renderBacklogAge(task) {
+    const daysWaiting = getDaysWaiting(task);
+    const ageLevel = getBacklogAgeLevel(daysWaiting);
+
+    if (daysWaiting <= 0) {
+      return null;
+    }
+
+    return (
+      <span className={`backlog-age-badge ${ageLevel}`}>
+        {daysWaiting} gündür bekliyor
+      </span>
+    );
+  }
+
+  function renderBacklogWarning(task) {
+    const daysWaiting = getDaysWaiting(task);
+    const ageLevel = getBacklogAgeLevel(daysWaiting);
+
+    if (ageLevel !== "danger") return null;
+
+    return (
+      <div className={`backlog-age-message ${ageLevel}`}>
+        {ageLevel === "danger"
+          ? "Bu görev 7+ gündür bekliyor. Today'e al, sil veya parçala."
+          : "Bu görev birkaç gündür bekliyor. Hâlâ gerekli mi kontrol et."}
+      </div>
+    );
+  }
+
   function renderTask(task, source) {
     const isEditing = editingTaskId === task.id;
+    const isBacklog = source === "backlog";
 
     return (
       <article className="compact-task-card" key={task.id}>
@@ -211,7 +285,11 @@ function DeskColumn({
                 <span className={`badge priority-badge ${task.priority}`}>
                   {getPriorityLabel(task.priority)}
                 </span>
+
+                {isBacklog && renderBacklogAge(task)}
               </div>
+
+              {isBacklog && renderBacklogWarning(task)}
             </div>
 
             <div className="compact-task-actions">
@@ -250,6 +328,7 @@ function DeskColumn({
           <span>{todayTasks.length} Today</span>
           <span>{backlogTasks.length} Backlog</span>
           <span>{highPriorityCount} High</span>
+          {agedBacklogCount > 0 && <span>{agedBacklogCount} Aging</span>}
         </div>
       </div>
 
@@ -274,6 +353,15 @@ function DeskColumn({
       {todayTasks.length >= TODAY_TASK_LIMIT && (
         <div className="daily-limit-warning">
           Today listesinde {todayTasks.length} görev var. Bugünlük planı sade tutmak daha mantıklı olabilir.
+        </div>
+      )}
+
+      {agedBacklogCount > 0 && (
+        <div className="backlog-summary-alert">
+          <strong>{agedBacklogCount} Backlog uyarısı</strong>
+          <span>
+            Uzun süredir bekleyen görev var. Today'e al, sil veya parçala.
+          </span>
         </div>
       )}
 
@@ -357,3 +445,5 @@ function DeskColumn({
 }
 
 export default DeskColumn;
+
+

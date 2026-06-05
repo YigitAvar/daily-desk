@@ -123,7 +123,7 @@ function App() {
 
   function moveTask(taskId, targetStatus) {
     const nextTasks = tasks.map((task) =>
-      task.id === taskId ? { ...task, status: targetStatus } : task
+      task.id === taskId ? { ...task, status: targetStatus, movedToBacklogAt: targetStatus === "backlog" ? new Date().toISOString() : task.movedToBacklogAt } : task
     );
 
     updateTasks(nextTasks);
@@ -334,7 +334,7 @@ function App() {
 
     const nextTasks = tasks.map((task) =>
       task.status === "today" && !task.completed
-        ? { ...task, status: "backlog" }
+        ? { ...task, status: "backlog", movedToBacklogAt: new Date().toISOString() }
         : task
     );
 

@@ -1190,3 +1190,83 @@ h1 {
 .import-button input {
   display: none;
 }
+
+/* Backlog aging */
+
+.backlog-age-badge {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.backlog-age-badge.normal {
+  background: rgba(244, 241, 234, 0.08);
+  color: #bfb7a7;
+  border-color: rgba(244, 241, 234, 0.12);
+}
+
+.backlog-age-badge.warning {
+  background: rgba(217, 199, 163, 0.12);
+  color: #dcc79a;
+  border-color: rgba(217, 199, 163, 0.24);
+}
+
+.backlog-age-badge.danger {
+  background: rgba(255, 107, 107, 0.12);
+  color: #ff9a9a;
+  border-color: rgba(255, 107, 107, 0.24);
+}
+
+.backlog-age-message {
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 14px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.backlog-age-message.warning {
+  border: 1px solid rgba(217, 199, 163, 0.2);
+  background: rgba(217, 199, 163, 0.08);
+  color: #dcc79a;
+}
+
+.backlog-age-message.danger {
+  border: 1px solid rgba(255, 107, 107, 0.2);
+  background: rgba(255, 107, 107, 0.08);
+  color: #ff9a9a;
+}
+
+/* Backlog summary alert */
+
+.backlog-summary-alert {
+  display: grid;
+  gap: 4px;
+  margin-top: -12px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(255, 107, 107, 0.2);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: rgba(255, 107, 107, 0.075);
+  color: #ff9a9a;
+}
+
+.backlog-summary-alert strong {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.backlog-summary-alert span {
+  color: #e6b0b0;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
