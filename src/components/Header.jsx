@@ -1,4 +1,10 @@
-﻿function Header({ onCloseDay, onOpenHistory, onOpenSettings }) {
+﻿function Header({
+  onCloseDay,
+  onOpenHistory,
+  onOpenSettings,
+  onOpenNotifications,
+  notificationCount,
+}) {
   return (
     <section className="hero">
       <div>
@@ -12,6 +18,14 @@
       <div className="hero-actions">
         <button className="history-button" onClick={onOpenSettings}>
           Ayarlar
+        </button>
+
+        <button
+          className={notificationCount > 0 ? "history-button has-alert" : "history-button"}
+          onClick={onOpenNotifications}
+        >
+          Bildirimler
+          {notificationCount > 0 && <span>{notificationCount}</span>}
         </button>
 
         <button className="history-button" onClick={onOpenHistory}>

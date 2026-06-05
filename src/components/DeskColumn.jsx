@@ -51,6 +51,46 @@ function getBacklogAgeLevel(daysWaiting) {
   return "normal";
 }
 
+function isLargeTaskText(text) {
+  return text.length > LONG_TASK_LENGTH;
+}
+
+function LargeTaskConfirmModal({ taskText, onCancel, onConfirm }) {
+  return (
+    <div className="modal-backdrop">
+      <section className="close-day-modal large-task-modal">
+        <div className="modal-header">
+          <div>
+            <p className="eyebrow">Task Check</p>
+            <h2>Büyük Görev</h2>
+            <p>
+              Bu görev biraz büyük görünüyor. Tek görev olarak ekleyebilir veya geri dönüp daha küçük parçalara bölebilirsin.
+            </p>
+          </div>
+
+          <button className="modal-close-button" onClick={onCancel}>
+            ×
+          </button>
+        </div>
+
+        <div className="large-task-preview">
+          {taskText}
+        </div>
+
+        <div className="modal-actions">
+          <button className="secondary-action" onClick={onCancel}>
+            Geri Dön
+          </button>
+
+          <button className="primary-action" onClick={onConfirm}>
+            Tek Görev Olarak Ekle
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function DeskColumn({
   title,
   subtitle,
@@ -71,6 +111,7 @@ function DeskColumn({
   const [showBacklog, setShowBacklog] = useState(true);
   const [showAllCompleted, setShowAllCompleted] = useState(false);
   const [formMessage, setFormMessage] = useState(null);
+  const [pendingLargeTask, setPendingLargeTask] = useState(null);
 
   const todayTasks = useMemo(
     () => tasks.filter((task) => task.status === "today" && !task.completed),
@@ -133,6 +174,16 @@ function DeskColumn({
     });
   }
 
+  function addValidatedTask(text, selectedPriority) {
+    onAddTask(category, "today", {
+      text,
+      priority: selectedPriority,
+    });
+
+    setTaskText("");
+    
+  }
+
   function handleSubmit(event) {
     event.preventDefault();
 
@@ -168,22 +219,26 @@ function DeskColumn({
       }
     }
 
-    onAddTask(category, "today", {
-      text: normalizedTaskText,
-      priority,
-    });
-
-    setTaskText("");
-
-    if (normalizedTaskText.length > LONG_TASK_LENGTH) {
-      showMessage(
-        "warning",
-        "Bu görev biraz büyük görünüyor. Gerekirse daha küçük parçalara böl."
-      );
+    if (isLargeTaskText(normalizedTaskText)) {
+      setPendingLargeTask({
+        text: normalizedTaskText,
+        priority,
+      });
       return;
     }
 
-    showMessage("success", "Görev eklendi.");
+    addValidatedTask(normalizedTaskText, priority);
+  }
+
+  function confirmLargeTask() {
+    if (!pendingLargeTask) return;
+
+    addValidatedTask(pendingLargeTask.text, pendingLargeTask.priority);
+    setPendingLargeTask(null);
+  }
+
+  function cancelLargeTask() {
+    setPendingLargeTask(null);
   }
 
   function startEditing(task) {
@@ -229,24 +284,10 @@ function DeskColumn({
     );
   }
 
-  function renderBacklogWarning(task) {
-    const daysWaiting = getDaysWaiting(task);
-    const ageLevel = getBacklogAgeLevel(daysWaiting);
-
-    if (ageLevel !== "danger") return null;
-
-    return (
-      <div className={`backlog-age-message ${ageLevel}`}>
-        {ageLevel === "danger"
-          ? "Bu görev 7+ gündür bekliyor. Today'e al, sil veya parçala."
-          : "Bu görev birkaç gündür bekliyor. Hâlâ gerekli mi kontrol et."}
-      </div>
-    );
-  }
-
   function renderTask(task, source) {
     const isEditing = editingTaskId === task.id;
     const isBacklog = source === "backlog";
+    const isLargeTask = isLargeTaskText(task.text);
 
     return (
       <article className="compact-task-card" key={task.id}>
@@ -285,6 +326,10 @@ function DeskColumn({
                 <span className={`badge priority-badge ${task.priority}`}>
                   {getPriorityLabel(task.priority)}
                 </span>
+
+                {isLargeTask && (
+                  <span className="large-task-badge">Büyük görev</span>
+                )}
 
                 {isBacklog && renderBacklogAge(task)}
               </div>
@@ -438,11 +483,17 @@ function DeskColumn({
           </div>
         </div>
       )}
+
+      {pendingLargeTask && (
+        <LargeTaskConfirmModal
+          taskText={pendingLargeTask.text}
+          onCancel={cancelLargeTask}
+          onConfirm={confirmLargeTask}
+        />
+      )}
     </section>
   );
 }
 
 export default DeskColumn;
-
-
 

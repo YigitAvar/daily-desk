@@ -6,6 +6,7 @@ import DeskColumn from "./components/DeskColumn";
 import CloseDayModal from "./components/CloseDayModal";
 import HistoryModal from "./components/HistoryModal";
 import SettingsModal from "./components/SettingsModal";
+import NotificationsModal from "./components/NotificationsModal";
 
 const TASKS_STORAGE_KEY = "daily-desk-tasks";
 const HISTORY_STORAGE_KEY = "daily-desk-history";
@@ -41,6 +42,23 @@ function formatTimeLabel(date) {
   }).format(date);
 }
 
+function getDaysWaiting(task) {
+  const referenceDate = task.movedToBacklogAt || task.createdAt;
+
+  if (!referenceDate) return 0;
+
+  const created = new Date(referenceDate);
+  const now = new Date();
+  const diffMs = now.getTime() - created.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  return Math.max(diffDays, 0);
+}
+
+function isLargeTask(task) {
+  return task.text.length > 80;
+}
+
 function isValidImportedData(data) {
   return (
     data &&
@@ -62,6 +80,7 @@ function App() {
   const [isCloseDayModalOpen, setIsCloseDayModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
   const [closeDayMode, setCloseDayMode] = useState("manual");
 
   function updateTasks(nextTasks) {
@@ -302,6 +321,14 @@ function App() {
     setIsSettingsModalOpen(false);
   }
 
+  function openNotificationsModal() {
+    setIsNotificationsModalOpen(true);
+  }
+
+  function closeNotificationsModal() {
+    setIsNotificationsModalOpen(false);
+  }
+
   function moveUnfinishedTodayTasksToBacklog() {
     const now = new Date();
 
@@ -367,6 +394,73 @@ function App() {
     [tasks]
   );
 
+  const notifications = useMemo(() => {
+    const alerts = [];
+
+    const workTodayCount = tasks.filter(
+      (task) => task.category === "work" && task.status === "today" && !task.completed
+    ).length;
+
+    const personalTodayCount = tasks.filter(
+      (task) => task.category === "personal" && task.status === "today" && !task.completed
+    ).length;
+
+    if (workTodayCount >= 5) {
+      alerts.push({
+        id: "work-today-limit",
+        type: "warning",
+        category: "work",
+        title: "İş Today listesi dolu",
+        message: `İş tarafında ${workTodayCount} Today görevi var. Bugünlük planı sade tutmak daha mantıklı olabilir.`,
+      });
+    }
+
+    if (personalTodayCount >= 5) {
+      alerts.push({
+        id: "personal-today-limit",
+        type: "warning",
+        category: "personal",
+        title: "Kişisel Today listesi dolu",
+        message: `Kişisel tarafta ${personalTodayCount} Today görevi var. Bugünlük planı sade tutmak daha mantıklı olabilir.`,
+      });
+    }
+
+    tasks
+      .filter((task) => task.status === "backlog" && !task.completed)
+      .forEach((task) => {
+        const daysWaiting = getDaysWaiting(task);
+
+        if (daysWaiting >= 3) {
+          alerts.push({
+            id: `backlog-${task.id}`,
+            type: daysWaiting >= 7 ? "danger" : "warning",
+            category: task.category,
+            title: `${daysWaiting} gündür Backlog'da`,
+            message:
+              daysWaiting >= 7
+                ? "Bu görev uzun süredir bekliyor. Today'e al, sil veya parçala."
+                : "Bu görev birkaç gündür bekliyor. Hâlâ gerekli mi kontrol et.",
+            taskText: task.text,
+          });
+        }
+      });
+
+    tasks
+      .filter((task) => !task.completed && isLargeTask(task))
+      .forEach((task) => {
+        alerts.push({
+          id: `large-${task.id}`,
+          type: "info",
+          category: task.category,
+          title: "Büyük görev",
+          message: "Bu görev büyük görünüyor. Daha küçük adımlara bölmeyi düşün.",
+          taskText: task.text,
+        });
+      });
+
+    return alerts;
+  }, [tasks]);
+
   useEffect(() => {
     const todayKey = getDateKey(new Date());
     const lastActiveDate = localStorage.getItem(LAST_ACTIVE_DATE_KEY);
@@ -395,6 +489,8 @@ function App() {
         onCloseDay={() => openCloseDayModal("manual")}
         onOpenHistory={openHistoryModal}
         onOpenSettings={openSettingsModal}
+        onOpenNotifications={openNotificationsModal}
+        notificationCount={notifications.length}
       />
 
       <section className="dual-desk-layout">
@@ -457,8 +553,20 @@ function App() {
           onImportData={importData}
         />
       )}
+
+      {isNotificationsModalOpen && (
+        <NotificationsModal
+          notifications={notifications}
+          onClose={closeNotificationsModal}
+        />
+      )}
     </main>
   );
 }
 
 export default App;
+
+
+
+
+
