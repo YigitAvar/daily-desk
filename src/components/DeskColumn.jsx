@@ -288,8 +288,6 @@ function DeskColumn({
 
                 {isBacklog && renderBacklogAge(task)}
               </div>
-
-              {isBacklog && renderBacklogWarning(task)}
             </div>
 
             <div className="compact-task-actions">
@@ -328,7 +326,7 @@ function DeskColumn({
           <span>{todayTasks.length} Today</span>
           <span>{backlogTasks.length} Backlog</span>
           <span>{highPriorityCount} High</span>
-          {agedBacklogCount > 0 && <span>{agedBacklogCount} Aging</span>}
+          {agedBacklogCount > 0 && <span>{agedBacklogCount} Bekleyen</span>}
         </div>
       </div>
 
@@ -445,5 +443,6 @@ function DeskColumn({
 }
 
 export default DeskColumn;
+
 
 

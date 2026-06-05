@@ -1270,3 +1270,32 @@ h1 {
   font-weight: 800;
   line-height: 1.35;
 }
+
+/* Better desk stats placement */
+
+.desk-column-header {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.desk-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  align-content: initial;
+}
+
+.desk-stats span {
+  width: fit-content;
+  min-width: 92px;
+  padding: 7px 11px;
+  text-align: center;
+}
+
+.desk-stats span:last-child {
+  border-color: rgba(255, 107, 107, 0.2);
+  background: rgba(255, 107, 107, 0.075);
+  color: #ff9a9a;
+}
