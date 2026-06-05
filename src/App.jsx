@@ -41,6 +41,15 @@ function formatTimeLabel(date) {
   }).format(date);
 }
 
+function isValidImportedData(data) {
+  return (
+    data &&
+    Array.isArray(data.tasks) &&
+    Array.isArray(data.history) &&
+    data.app === "daily-desk"
+  );
+}
+
 function App() {
   const [tasks, setTasks] = useState(() => {
     return normalizeTasks(loadTasks(TASKS_STORAGE_KEY, initialTasks));
@@ -195,6 +204,76 @@ function App() {
     setIsSettingsModalOpen(false);
     setIsHistoryModalOpen(false);
     setIsCloseDayModalOpen(false);
+  }
+
+  function exportData() {
+    const now = new Date();
+
+    const backup = {
+      app: "daily-desk",
+      version: 1,
+      exportedAt: now.toISOString(),
+      tasks,
+      history,
+      lastActiveDate: localStorage.getItem(LAST_ACTIVE_DATE_KEY),
+    };
+
+    const json = JSON.stringify(backup, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const fileDate = getDateKey(now);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `daily-desk-backup-${fileDate}.json`;
+    link.click();
+
+    URL.revokeObjectURL(url);
+  }
+
+  function importData(event) {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      try {
+        const parsedData = JSON.parse(reader.result);
+
+        if (!isValidImportedData(parsedData)) {
+          alert("Bu dosya geçerli bir Daily Desk yedeği gibi görünmüyor.");
+          return;
+        }
+
+        const confirmed = confirm(
+          "Bu yedek içe aktarılacak. Mevcut görevler ve geçmiş bununla değiştirilecek. Emin misin?"
+        );
+
+        if (!confirmed) return;
+
+        const importedTasks = normalizeTasks(parsedData.tasks);
+        const importedHistory = parsedData.history;
+
+        updateTasks(importedTasks);
+        updateHistory(importedHistory);
+
+        if (parsedData.lastActiveDate) {
+          localStorage.setItem(LAST_ACTIVE_DATE_KEY, parsedData.lastActiveDate);
+        } else {
+          markTodayAsActiveDate();
+        }
+
+        alert("Yedek başarıyla içe aktarıldı.");
+      } catch {
+        alert("Yedek dosyası okunamadı. JSON formatı bozuk olabilir.");
+      } finally {
+        event.target.value = "";
+      }
+    };
+
+    reader.readAsText(file);
   }
 
   function openCloseDayModal(mode = "manual") {
@@ -374,6 +453,8 @@ function App() {
           onClearCompletedTasks={clearCompletedTasksFromSettings}
           onClearHistory={clearHistory}
           onResetApp={resetApp}
+          onExportData={exportData}
+          onImportData={importData}
         />
       )}
     </main>

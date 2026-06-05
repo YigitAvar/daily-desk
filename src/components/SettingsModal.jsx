@@ -7,6 +7,8 @@
   onClearCompletedTasks,
   onClearHistory,
   onResetApp,
+  onExportData,
+  onImportData,
 }) {
   return (
     <div className="modal-backdrop">
@@ -15,7 +17,7 @@
           <div>
             <p className="eyebrow">Settings</p>
             <h2>Ayarlar</h2>
-            <p>Verileri temizle, geçmişi yönet veya uygulamayı sıfırla.</p>
+            <p>Verileri temizle, geçmişi yönet, yedek al veya uygulamayı sıfırla.</p>
           </div>
 
           <button className="modal-close-button" onClick={onClose}>
@@ -24,6 +26,33 @@
         </div>
 
         <div className="settings-grid">
+          <article className="settings-card">
+            <div>
+              <h3>Yedek Dışa Aktar</h3>
+              <p>Görevleri ve geçmiş kayıtlarını JSON dosyası olarak indirir.</p>
+              <span>{taskCount} görev / {historyCount} kayıt</span>
+            </div>
+
+            <button onClick={onExportData}>JSON İndir</button>
+          </article>
+
+          <article className="settings-card">
+            <div>
+              <h3>Yedek İçe Aktar</h3>
+              <p>Daha önce indirdiğin Daily Desk JSON yedeğini geri yükler.</p>
+              <span>JSON dosyası</span>
+            </div>
+
+            <label className="import-button">
+              JSON Yükle
+              <input
+                type="file"
+                accept="application/json,.json"
+                onChange={onImportData}
+              />
+            </label>
+          </article>
+
           <article className="settings-card">
             <div>
               <h3>Tüm Görevler</h3>

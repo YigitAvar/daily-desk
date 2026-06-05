@@ -1165,3 +1165,28 @@ h1 {
     width: 100%;
   }
 }
+
+/* Import button */
+
+.import-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(244, 241, 234, 0.12);
+  border-radius: 999px;
+  padding: 10px 13px;
+  background: rgba(244, 241, 234, 0.08);
+  color: #d8d0c1;
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.import-button:hover {
+  background: rgba(244, 241, 234, 0.13);
+}
+
+.import-button input {
+  display: none;
+}
