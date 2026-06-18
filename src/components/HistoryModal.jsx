@@ -1,6 +1,9 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
-function getTaskAreaCounts(tasks) {
+const HEATMAP_WEEK_COUNT = 12;
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
+function getTaskAreaCounts(tasks = []) {
   return tasks.reduce(
     (counts, task) => {
       if (task.category === "work") {
@@ -15,36 +18,120 @@ function getTaskAreaCounts(tasks) {
   );
 }
 
-function getLastSevenDays(history) {
-  return history.slice(0, 7);
+function getLocalDateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function getHistoryDateKey(day) {
+  const date = new Date(day.closedAt);
+  return Number.isNaN(date.getTime()) ? null : getLocalDateKey(date);
+}
+
+function getContributionLevel(count) {
+  if (count === 0) return 0;
+  if (count <= 2) return 1;
+  if (count <= 4) return 2;
+  if (count <= 7) return 3;
+  return 4;
+}
+
+function buildHeatmap(history) {
+  const completedByDate = history.reduce((counts, day) => {
+    const dateKey = getHistoryDateKey(day);
+
+    if (dateKey) {
+      counts.set(
+        dateKey,
+        (counts.get(dateKey) || 0) + (day.completedTasks?.length || 0)
+      );
+    }
+
+    return counts;
+  }, new Map());
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const endDate = new Date(today);
+  endDate.setDate(today.getDate() + (6 - today.getDay()));
+
+  const startDate = new Date(endDate);
+  startDate.setDate(endDate.getDate() - (HEATMAP_WEEK_COUNT * 7 - 1));
+
+  return Array.from({ length: HEATMAP_WEEK_COUNT }, (_, weekIndex) =>
+    Array.from({ length: 7 }, (_, dayIndex) => {
+      const date = new Date(
+        startDate.getTime() + (weekIndex * 7 + dayIndex) * DAY_IN_MS
+      );
+      const dateKey = getLocalDateKey(date);
+      const count = date > today ? 0 : completedByDate.get(dateKey) || 0;
+
+      return {
+        dateKey,
+        count,
+        level: getContributionLevel(count),
+        isFuture: date > today,
+        label: new Intl.DateTimeFormat("tr-TR", {
+          day: "numeric",
+          month: "short",
+        }).format(date),
+      };
+    })
+  );
 }
 
 function HistoryModal({ history, onClose, onClearHistory }) {
   const [expandedDayId, setExpandedDayId] = useState(null);
 
-  const lastSevenDays = useMemo(() => getLastSevenDays(history), [history]);
-
   const summary = useMemo(() => {
-    const completedTotal = lastSevenDays.reduce(
-      (total, day) => total + day.completedTasks.length,
-      0
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 6);
+
+    return history.reduce(
+      (totals, day) => {
+        const completedTasks = day.completedTasks || [];
+        const unfinishedTasks = day.unfinishedTasks || [];
+        const completedCounts = getTaskAreaCounts(completedTasks);
+        const closedAt = new Date(day.closedAt);
+        const closedDay = new Date(closedAt);
+        closedDay.setHours(0, 0, 0, 0);
+
+        totals.completedTotal += completedTasks.length;
+        totals.movedTotal += unfinishedTasks.length;
+        totals.workCompleted += completedCounts.work;
+        totals.personalCompleted += completedCounts.personal;
+
+        if (!Number.isNaN(closedAt.getTime())) {
+          if (closedDay.getTime() === today.getTime()) {
+            totals.completedToday += completedTasks.length;
+          }
+
+          if (closedDay >= sevenDaysAgo && closedDay <= today) {
+            totals.completedLastSevenDays += completedTasks.length;
+          }
+        }
+
+        return totals;
+      },
+      {
+        completedToday: 0,
+        completedLastSevenDays: 0,
+        completedTotal: 0,
+        movedTotal: 0,
+        workCompleted: 0,
+        personalCompleted: 0,
+      }
     );
+  }, [history]);
 
-    const movedTotal = lastSevenDays.reduce(
-      (total, day) => total + day.unfinishedTasks.length,
-      0
-    );
-
-    const allCompletedTasks = lastSevenDays.flatMap((day) => day.completedTasks);
-    const completedAreaCounts = getTaskAreaCounts(allCompletedTasks);
-
-    return {
-      completedTotal,
-      movedTotal,
-      workCompleted: completedAreaCounts.work,
-      personalCompleted: completedAreaCounts.personal,
-    };
-  }, [lastSevenDays]);
+  const heatmapWeeks = useMemo(() => buildHeatmap(history), [history]);
 
   function toggleDay(dayId) {
     setExpandedDayId((currentDayId) =>
@@ -59,38 +146,90 @@ function HistoryModal({ history, onClose, onClearHistory }) {
           <div>
             <p className="eyebrow">Daily History</p>
             <h2>Geçmiş</h2>
-            <p>Kapatılan günlerin kısa özetleri burada tutulur.</p>
+            <p>İlerlemeyi gör, ayrıntıya yalnızca gerektiğinde in.</p>
           </div>
 
-          <button className="modal-close-button" onClick={onClose}>
+          <button
+            className="modal-close-button"
+            onClick={onClose}
+            aria-label="Geçmişi kapat"
+          >
             ×
           </button>
         </div>
 
         <div className="history-summary-grid">
-          <article className="history-summary-card">
-            <span>Son 7 Gün</span>
-            <strong>{lastSevenDays.length}</strong>
-            <p>kayıt</p>
+          <article className="history-summary-card today">
+            <span>Bugün</span>
+            <strong>{summary.completedToday}</strong>
+            <p>tamamlanan görev</p>
           </article>
 
           <article className="history-summary-card success">
-            <span>Tamamlanan</span>
-            <strong>{summary.completedTotal}</strong>
-            <p>görev</p>
+            <span>Son 7 Gün</span>
+            <strong>{summary.completedLastSevenDays}</strong>
+            <p>tamamlanan görev</p>
           </article>
 
-          <article className="history-summary-card warning">
-            <span>Taşınan</span>
-            <strong>{summary.movedTotal}</strong>
-            <p>Backlog</p>
+          <article className="history-summary-card">
+            <span>Tüm Zamanlar</span>
+            <strong>{summary.completedTotal}</strong>
+            <p>tamamlanan görev</p>
           </article>
 
           <article className="history-summary-card balance">
-            <span>Denge</span>
-            <strong>{summary.workCompleted}/{summary.personalCompleted}</strong>
-            <p>İş / Kişisel</p>
+            <span>İş / Kişisel</span>
+            <strong>
+              {summary.workCompleted}
+              <small>/</small>
+              {summary.personalCompleted}
+            </strong>
+            <p>tamamlama dengesi</p>
           </article>
+        </div>
+
+        <section className="history-heatmap-panel">
+          <div className="history-panel-heading">
+            <div>
+              <h3>12 haftalık ritim</h3>
+              <p>Her kare, o gün tamamlanan görev yoğunluğunu gösterir.</p>
+            </div>
+
+            <div className="heatmap-legend" aria-label="Yoğunluk açıklaması">
+              <span>Az</span>
+              {[0, 1, 2, 3, 4].map((level) => (
+                <i key={level} className={`heatmap-cell level-${level}`} />
+              ))}
+              <span>Çok</span>
+            </div>
+          </div>
+
+          <div className="history-heatmap-scroll">
+            <div className="history-heatmap" aria-label="Tamamlanan görev heatmap'i">
+              {heatmapWeeks.map((week, weekIndex) => (
+                <div className="heatmap-week" key={weekIndex}>
+                  {week.map((day) => (
+                    <span
+                      key={day.dateKey}
+                      className={`heatmap-cell level-${day.level}${
+                        day.isFuture ? " future" : ""
+                      }`}
+                      title={`${day.label}: ${day.count} tamamlanan görev`}
+                      aria-label={`${day.label}: ${day.count} tamamlanan görev`}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <div className="history-feed-heading">
+          <div>
+            <h3>Gün özetleri</h3>
+            <p>{history.length} kapanış kaydı</p>
+          </div>
+          <span>{summary.movedTotal} görev Backlog&apos;a taşındı</span>
         </div>
 
         {history.length === 0 ? (
@@ -98,57 +237,76 @@ function HistoryModal({ history, onClose, onClearHistory }) {
         ) : (
           <div className="history-list compact-history-list">
             {history.map((day) => {
+              const completedTasks = day.completedTasks || [];
+              const unfinishedTasks = day.unfinishedTasks || [];
               const isExpanded = expandedDayId === day.id;
-              const completedCounts = getTaskAreaCounts(day.completedTasks);
-              const movedCounts = getTaskAreaCounts(day.unfinishedTasks);
+              const completedCounts = getTaskAreaCounts(completedTasks);
+              const movedCounts = getTaskAreaCounts(unfinishedTasks);
+              const completedTotal = completedTasks.length;
+              const workShare =
+                completedTotal > 0
+                  ? (completedCounts.work / completedTotal) * 100
+                  : 50;
 
               return (
                 <article className="history-card compact-history-card" key={day.id}>
                   <div className="history-card-header">
                     <div>
                       <span className="history-date">{day.dateLabel}</span>
-                      <p>{day.closedAtLabel}</p>
+                      <p>{day.closedAtLabel} kapanışı</p>
                     </div>
 
                     <div className="history-stats">
-                      <span>{day.completedTasks.length} tamamlanan</span>
-                      <span>{day.unfinishedTasks.length} taşınan</span>
+                      <span className="completed-stat">
+                        {completedTotal} tamamlandı
+                      </span>
+                      <span>{unfinishedTasks.length} taşındı</span>
                     </div>
                   </div>
 
-                  <div className="history-balance-row">
-                    <div>
-                      <span>İş</span>
-                      <strong>
-                        {completedCounts.work} tamamlanan / {movedCounts.work} taşınan
-                      </strong>
+                  <div className="history-balance-visual">
+                    <div className="history-balance-labels">
+                      <span>İş {completedCounts.work}</span>
+                      <span>Kişisel {completedCounts.personal}</span>
                     </div>
-
-                    <div>
-                      <span>Kişisel</span>
-                      <strong>
-                        {completedCounts.personal} tamamlanan / {movedCounts.personal} taşınan
-                      </strong>
+                    <div
+                      className="history-balance-bar"
+                      aria-label={`${completedCounts.work} iş, ${completedCounts.personal} kişisel görev tamamlandı`}
+                    >
+                      <span
+                        className="work-share"
+                        style={{ width: `${workShare}%` }}
+                      />
+                      <span
+                        className="personal-share"
+                        style={{ width: `${100 - workShare}%` }}
+                      />
                     </div>
                   </div>
 
-                  <button
-                    className="history-detail-toggle"
-                    onClick={() => toggleDay(day.id)}
-                  >
-                    {isExpanded ? "Detayı Kapat" : "Detayı Aç"}
-                  </button>
+                  <div className="history-card-footer">
+                    <span>
+                      İş: {movedCounts.work}, Kişisel: {movedCounts.personal} taşındı
+                    </span>
+                    <button
+                      className="history-detail-toggle"
+                      onClick={() => toggleDay(day.id)}
+                      aria-expanded={isExpanded}
+                    >
+                      {isExpanded ? "Detayı kapat" : "Görevleri gör"}
+                    </button>
+                  </div>
 
                   {isExpanded && (
                     <div className="history-details">
                       <div className="history-section">
                         <h3>Tamamlananlar</h3>
 
-                        {day.completedTasks.length === 0 ? (
+                        {completedTasks.length === 0 ? (
                           <p className="history-empty-text">Tamamlanan görev yok.</p>
                         ) : (
                           <ul>
-                            {day.completedTasks.map((task) => (
+                            {completedTasks.map((task) => (
                               <li key={task.id}>
                                 <strong>
                                   {task.category === "work" ? "İş" : "Kişisel"}
@@ -161,13 +319,13 @@ function HistoryModal({ history, onClose, onClearHistory }) {
                       </div>
 
                       <div className="history-section">
-                        <h3>Backlog'a Taşınanlar</h3>
+                        <h3>Backlog&apos;a taşınanlar</h3>
 
-                        {day.unfinishedTasks.length === 0 ? (
+                        {unfinishedTasks.length === 0 ? (
                           <p className="history-empty-text">Taşınan görev yok.</p>
                         ) : (
                           <ul>
-                            {day.unfinishedTasks.map((task) => (
+                            {unfinishedTasks.map((task) => (
                               <li key={task.id}>
                                 <strong>
                                   {task.category === "work" ? "İş" : "Kişisel"}

@@ -1544,6 +1544,124 @@ h1 {
   color: #8bbcff;
 }
 
+.history-summary-card.today strong {
+  color: #f4f1ea;
+}
+
+.history-summary-card strong small {
+  margin: 0 4px;
+  color: var(--text-soft);
+  font-size: 16px;
+}
+
+.history-heatmap-panel {
+  margin-bottom: 22px;
+  border: 1px solid rgba(244, 241, 234, 0.1);
+  border-radius: 22px;
+  padding: 16px;
+  background: rgba(17, 17, 17, 0.38);
+}
+
+.history-panel-heading,
+.history-feed-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.history-panel-heading {
+  margin-bottom: 16px;
+}
+
+.history-panel-heading h3,
+.history-feed-heading h3 {
+  margin-bottom: 4px;
+  color: var(--text-main);
+  font-size: 16px;
+}
+
+.history-panel-heading p,
+.history-feed-heading p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-soft);
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.history-heatmap-scroll {
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.history-heatmap {
+  width: max-content;
+  min-width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 5px;
+}
+
+.heatmap-week {
+  display: grid;
+  gap: 5px;
+}
+
+.heatmap-cell {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border: 1px solid rgba(244, 241, 234, 0.06);
+  border-radius: 4px;
+}
+
+.heatmap-cell.level-0 {
+  background: rgba(244, 241, 234, 0.055);
+}
+
+.heatmap-cell.level-1 {
+  background: rgba(157, 218, 165, 0.22);
+}
+
+.heatmap-cell.level-2 {
+  background: rgba(157, 218, 165, 0.42);
+}
+
+.heatmap-cell.level-3 {
+  background: rgba(157, 218, 165, 0.68);
+}
+
+.heatmap-cell.level-4 {
+  background: #9ddaa5;
+}
+
+.heatmap-cell.future {
+  opacity: 0.2;
+}
+
+.history-feed-heading {
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.history-feed-heading > span {
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(217, 199, 163, 0.08);
+  color: var(--medium-text);
+  font-size: 11px;
+  font-weight: 900;
+}
+
 .compact-history-list {
   gap: 12px;
 }
@@ -1552,36 +1670,66 @@ h1 {
   padding: 14px;
 }
 
-.history-balance-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-top: 12px;
+.history-stats .completed-stat {
+  border-color: rgba(157, 218, 165, 0.18);
+  background: rgba(157, 218, 165, 0.08);
+  color: #9ddaa5;
 }
 
-.history-balance-row div {
-  border: 1px solid rgba(244, 241, 234, 0.08);
-  border-radius: 16px;
-  padding: 10px;
-  background: rgba(244, 241, 234, 0.045);
+.history-balance-visual {
+  margin-top: 4px;
 }
 
-.history-balance-row span {
-  display: block;
-  margin-bottom: 5px;
+.history-balance-labels {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 7px;
+}
+
+.history-balance-labels span {
   color: var(--text-soft);
   font-size: 11px;
   font-weight: 900;
 }
 
-.history-balance-row strong {
-  color: var(--text-muted);
-  font-size: 13px;
+.history-balance-bar {
+  display: flex;
+  overflow: hidden;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(244, 241, 234, 0.06);
+}
+
+.history-balance-bar span {
+  min-width: 0;
+}
+
+.history-balance-bar .work-share {
+  background: #8bbcff;
+}
+
+.history-balance-bar .personal-share {
+  background: #dcc79a;
+}
+
+.history-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.history-card-footer > span {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .history-detail-toggle {
-  width: 100%;
-  margin-top: 12px;
+  width: auto;
+  margin-top: 0;
   border: 1px solid rgba(244, 241, 234, 0.1);
   border-radius: 999px;
   padding: 9px 12px;
@@ -1606,7 +1754,22 @@ h1 {
     grid-template-columns: 1fr 1fr;
   }
 
-  .history-balance-row {
-    grid-template-columns: 1fr;
+  .history-panel-heading,
+  .history-feed-heading,
+  .history-card-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .heatmap-legend {
+    align-self: flex-start;
+  }
+
+  .history-feed-heading > span {
+    width: fit-content;
+  }
+
+  .history-detail-toggle {
+    width: 100%;
   }
 }
