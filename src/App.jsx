@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { initialTasks } from "./data/initialTasks";
 import { loadTasks, saveTasks, saveValue, restoreValue } from "./utils/storage";
+import { getDaysWaiting, isLargeTask } from "./utils/tasks";
 import {
   getHistoryDateKey,
   getLocalDateFromKey,
@@ -164,23 +165,6 @@ function formatTimeLabel(date) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
-}
-
-function getDaysWaiting(task) {
-  const referenceDate = task.movedToBacklogAt || task.createdAt;
-
-  if (!referenceDate) return 0;
-
-  const created = new Date(referenceDate);
-  const now = new Date();
-  const diffMs = now.getTime() - created.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  return Math.max(diffDays, 0);
-}
-
-function isLargeTask(task) {
-  return task.text.length > 80;
 }
 
 function isValidImportedData(data) {

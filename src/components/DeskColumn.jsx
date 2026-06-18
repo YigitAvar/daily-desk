@@ -1,9 +1,9 @@
 ﻿import { useMemo, useState } from "react";
 import { priorities, getPriorityLabel } from "../data/options";
+import { getDaysWaiting, isLargeTaskText } from "../utils/tasks";
 
 const TODAY_TASK_LIMIT = 5;
 const MIN_TASK_LENGTH = 3;
-const LONG_TASK_LENGTH = 80;
 const BACKLOG_WARNING_DAYS = 3;
 const BACKLOG_DANGER_DAYS = 7;
 
@@ -32,27 +32,10 @@ function normalizeText(text) {
   return text.trim().replace(/\s+/g, " ");
 }
 
-function getDaysWaiting(task) {
-  const referenceDate = task.movedToBacklogAt || task.createdAt;
-
-  if (!referenceDate) return 0;
-
-  const created = new Date(referenceDate);
-  const now = new Date();
-  const diffMs = now.getTime() - created.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  return Math.max(diffDays, 0);
-}
-
 function getBacklogAgeLevel(daysWaiting) {
   if (daysWaiting >= BACKLOG_DANGER_DAYS) return "danger";
   if (daysWaiting >= BACKLOG_WARNING_DAYS) return "warning";
   return "normal";
-}
-
-function isLargeTaskText(text) {
-  return text.length > LONG_TASK_LENGTH;
 }
 
 function LargeTaskConfirmModal({ taskText, onCancel, onConfirm }) {
