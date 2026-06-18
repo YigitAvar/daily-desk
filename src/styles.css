@@ -1116,6 +1116,36 @@ h1 {
   color: #ff9a9a;
 }
 
+.save-error-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  border-radius: 16px;
+  padding: 13px 15px;
+  background: rgba(255, 107, 107, 0.1);
+  color: #ff9a9a;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.save-error-banner span {
+  flex: 1;
+}
+
+.save-error-dismiss {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
 /* Settings modal */
 
 .settings-modal {

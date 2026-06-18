@@ -18,3 +18,25 @@ export function saveTasks(storageKey, tasks) {
     return false;
   }
 }
+
+export function saveValue(storageKey, value) {
+  try {
+    localStorage.setItem(storageKey, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function restoreValue(storageKey, previousValue) {
+  try {
+    if (previousValue === null) {
+      localStorage.removeItem(storageKey);
+    } else {
+      localStorage.setItem(storageKey, previousValue);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}

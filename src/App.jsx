@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { initialTasks } from "./data/initialTasks";
-import { loadTasks, saveTasks } from "./utils/storage";
+import { loadTasks, saveTasks, saveValue, restoreValue } from "./utils/storage";
 import {
   getHistoryDateKey,
   getLocalDateFromKey,
@@ -21,6 +21,8 @@ const LAST_ACTIVE_DATE_KEY = "daily-desk-last-active-date";
 function normalizeTasks(tasks) {
   if (!Array.isArray(tasks)) return [];
 
+  const usedIds = new Set();
+
   return tasks
     .filter(
       (task) =>
@@ -28,20 +30,27 @@ function normalizeTasks(tasks) {
         typeof task === "object" &&
         typeof task.text === "string"
     )
-    .map((task) => ({
-      ...task,
-      category:
-        task.category === "work"
-          ? "work"
-          : task.category === "school" || task.category === "sport"
-          ? "personal"
-          : "personal",
-      status: task.status === "today" ? "today" : "backlog",
-      priority: ["low", "medium", "high"].includes(task.priority)
-        ? task.priority
-        : "medium",
-      completed: Boolean(task.completed),
-    }));
+    .map((task) => {
+      const id =
+        task.id && !usedIds.has(task.id) ? task.id : crypto.randomUUID();
+      usedIds.add(id);
+
+      return {
+        ...task,
+        id,
+        category:
+          task.category === "work"
+            ? "work"
+            : task.category === "school" || task.category === "sport"
+            ? "personal"
+            : "personal",
+        status: task.status === "today" ? "today" : "backlog",
+        priority: ["low", "medium", "high"].includes(task.priority)
+          ? task.priority
+          : "medium",
+        completed: Boolean(task.completed),
+      };
+    });
 }
 
 function mergeTaskSnapshots(...snapshotGroups) {
@@ -197,15 +206,28 @@ function App() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
   const [closeDayMode, setCloseDayMode] = useState("manual");
+  const [hasSaveError, setHasSaveError] = useState(false);
 
   function updateTasks(nextTasks) {
+    if (!saveTasks(TASKS_STORAGE_KEY, nextTasks)) {
+      setHasSaveError(true);
+      return false;
+    }
+
     setTasks(nextTasks);
-    saveTasks(TASKS_STORAGE_KEY, nextTasks);
+    setHasSaveError(false);
+    return true;
   }
 
   function updateHistory(nextHistory) {
+    if (!saveTasks(HISTORY_STORAGE_KEY, nextHistory)) {
+      setHasSaveError(true);
+      return false;
+    }
+
     setHistory(nextHistory);
-    saveTasks(HISTORY_STORAGE_KEY, nextHistory);
+    setHasSaveError(false);
+    return true;
   }
 
   function markTodayAsActiveDate() {
@@ -389,15 +411,35 @@ function App() {
 
         const importedTasks = normalizeTasks(parsedData.tasks);
         const importedHistory = normalizeHistory(parsedData.history);
+        const importedLastActiveDate =
+          parsedData.lastActiveDate || getLocalDateKey(new Date());
 
-        updateTasks(importedTasks);
-        updateHistory(importedHistory);
+        const previousTasks = localStorage.getItem(TASKS_STORAGE_KEY);
+        const previousHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
+        const previousLastActiveDate = localStorage.getItem(LAST_ACTIVE_DATE_KEY);
 
-        if (parsedData.lastActiveDate) {
-          localStorage.setItem(LAST_ACTIVE_DATE_KEY, parsedData.lastActiveDate);
-        } else {
-          markTodayAsActiveDate();
+        const tasksSaved = saveTasks(TASKS_STORAGE_KEY, importedTasks);
+        const historySaved =
+          tasksSaved && saveTasks(HISTORY_STORAGE_KEY, importedHistory);
+        const lastActiveSaved =
+          historySaved &&
+          saveValue(LAST_ACTIVE_DATE_KEY, importedLastActiveDate);
+
+        if (!tasksSaved || !historySaved || !lastActiveSaved) {
+          restoreValue(TASKS_STORAGE_KEY, previousTasks);
+          restoreValue(HISTORY_STORAGE_KEY, previousHistory);
+          restoreValue(LAST_ACTIVE_DATE_KEY, previousLastActiveDate);
+
+          setHasSaveError(true);
+          alert(
+            "Yedek içe aktarılamadı: tarayıcı depolamasına yazılamadı. Mevcut verilerin korundu."
+          );
+          return;
         }
+
+        setTasks(importedTasks);
+        setHistory(importedHistory);
+        setHasSaveError(false);
 
         alert("Yedek başarıyla içe aktarıldı.");
       } catch {
@@ -646,6 +688,24 @@ function App() {
 
   return (
     <main className="app-shell">
+      {hasSaveError && (
+        <div className="save-error-banner" role="alert">
+          <span>
+            Değişiklikler tarayıcı depolamasına kaydedilemedi. Depolama dolu veya
+            engellenmiş olabilir. Verilerini kaybetmemek için yedek al
+            (Ayarlar → Dışa Aktar).
+          </span>
+          <button
+            type="button"
+            className="save-error-dismiss"
+            onClick={() => setHasSaveError(false)}
+            aria-label="Uyarıyı kapat"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       <Header
         onCloseDay={() => openCloseDayModal("manual")}
         onOpenHistory={openHistoryModal}
