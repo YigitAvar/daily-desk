@@ -1845,6 +1845,149 @@ h1 {
   background: rgba(244, 241, 234, 0.12);
 }
 
+/* Motion / micro-interactions */
+
+.compact-task-card {
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease;
+  animation: card-in 0.18s ease-out;
+}
+
+.compact-task-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(244, 241, 234, 0.22);
+}
+
+.compact-task-card:focus-within {
+  border-color: rgba(244, 241, 234, 0.22);
+}
+
+.compact-task-card.completed p {
+  transition: color 0.18s ease, opacity 0.18s ease;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.check-button {
+  transition: background 0.16s ease, transform 0.12s ease;
+}
+
+.check-button:active {
+  transform: scale(0.92);
+}
+
+.compact-task-actions button,
+.compact-edit-actions button,
+.compact-task-card.completed button,
+.primary-action,
+.secondary-action,
+.danger-modal-action,
+.modal-close-button,
+.history-detail-toggle,
+.backlog-toggle {
+  transition: background 0.16s ease, transform 0.12s ease, opacity 0.16s ease;
+}
+
+.compact-task-actions button:active,
+.compact-edit-actions button:active,
+.compact-task-card.completed button:active,
+.primary-action:active,
+.secondary-action:active,
+.danger-modal-action:active,
+.modal-close-button:active,
+.history-detail-toggle:active,
+.backlog-toggle:active {
+  transform: scale(0.97);
+}
+
+.modal-backdrop {
+  animation: backdrop-in 0.2s ease-out;
+}
+
+.close-day-modal {
+  animation: modal-in 0.22s ease-out;
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.undo-toast,
+.save-error-banner {
+  animation: toast-in 0.22s ease-out;
+}
+
+.notification-card {
+  animation: card-in 0.2s ease-out;
+}
+
+.heatmap-cell {
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+
+.heatmap-cell:not(.future):hover {
+  transform: scale(1.18);
+  border-color: rgba(244, 241, 234, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .compact-task-card,
+  .compact-task-card:hover,
+  .compact-task-card.completed p,
+  .check-button,
+  .check-button:active,
+  .compact-task-actions button,
+  .compact-edit-actions button,
+  .compact-task-card.completed button,
+  .primary-action,
+  .secondary-action,
+  .danger-modal-action,
+  .modal-close-button,
+  .history-detail-toggle,
+  .backlog-toggle,
+  .modal-backdrop,
+  .close-day-modal,
+  .undo-toast,
+  .save-error-banner,
+  .notification-card,
+  .heatmap-cell,
+  .heatmap-cell:not(.future):hover {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
+}
+
 .history-details {
   margin-top: 14px;
   padding-top: 14px;
