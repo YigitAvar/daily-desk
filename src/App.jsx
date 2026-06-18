@@ -1,6 +1,12 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { initialTasks } from "./data/initialTasks";
 import { loadTasks, saveTasks } from "./utils/storage";
+import {
+  getHistoryDateKey,
+  getLocalDateFromKey,
+  getLocalDateKey,
+  normalizeDateKey,
+} from "./utils/date";
 import Header from "./components/Header";
 import DeskColumn from "./components/DeskColumn";
 import CloseDayModal from "./components/CloseDayModal";
@@ -13,18 +19,127 @@ const HISTORY_STORAGE_KEY = "daily-desk-history";
 const LAST_ACTIVE_DATE_KEY = "daily-desk-last-active-date";
 
 function normalizeTasks(tasks) {
-  return tasks.map((task) => ({
-    ...task,
-    category:
-      task.category === "school" || task.category === "sport"
-        ? "personal"
-        : task.category || "personal",
-    priority: task.priority || "medium",
-  }));
+  if (!Array.isArray(tasks)) return [];
+
+  return tasks
+    .filter(
+      (task) =>
+        task &&
+        typeof task === "object" &&
+        typeof task.text === "string"
+    )
+    .map((task) => ({
+      ...task,
+      category:
+        task.category === "work"
+          ? "work"
+          : task.category === "school" || task.category === "sport"
+          ? "personal"
+          : "personal",
+      status: task.status === "today" ? "today" : "backlog",
+      priority: ["low", "medium", "high"].includes(task.priority)
+        ? task.priority
+        : "medium",
+      completed: Boolean(task.completed),
+    }));
 }
 
-function getDateKey(date) {
-  return date.toISOString().slice(0, 10);
+function mergeTaskSnapshots(...snapshotGroups) {
+  const snapshotsById = new Map();
+
+  snapshotGroups.flat().forEach((task, index) => {
+    if (!task || typeof task !== "object") return;
+
+    const snapshotId = task.id || `legacy-${index}-${task.text || ""}`;
+    snapshotsById.set(snapshotId, task);
+  });
+
+  return Array.from(snapshotsById.values());
+}
+
+function normalizeHistory(history) {
+  if (!Array.isArray(history)) return [];
+
+  const recordsByDate = new Map();
+  const recordsWithoutDate = [];
+
+  history.forEach((day, index) => {
+    if (!day || typeof day !== "object") return;
+
+    const dateKey = getHistoryDateKey(day);
+    const historyDate = getLocalDateFromKey(dateKey);
+    const completedTasks = Array.isArray(day.completedTasks)
+      ? day.completedTasks.filter((task) => {
+          if (!task || typeof task !== "object") return false;
+
+          const completedDateKey = normalizeDateKey(task.completedAt);
+          return !dateKey || !completedDateKey || completedDateKey === dateKey;
+        })
+      : [];
+    const unfinishedTasks = Array.isArray(day.unfinishedTasks)
+      ? day.unfinishedTasks.filter(
+          (task) => task && typeof task === "object"
+        )
+      : [];
+    const normalizedDay = {
+      ...day,
+      id: day.id || `history-${dateKey || "unknown"}-${index}`,
+      ...(dateKey ? { dateKey } : {}),
+      dateLabel:
+        day.dateLabel || (historyDate ? formatDateLabel(historyDate) : "Tarih yok"),
+      closedAtLabel:
+        day.closedAtLabel ||
+        (normalizeDateKey(day.closedAt)
+          ? formatTimeLabel(new Date(day.closedAt))
+          : "—"),
+      completedTasks,
+      unfinishedTasks,
+    };
+
+    if (!dateKey) {
+      recordsWithoutDate.push(normalizedDay);
+      return;
+    }
+
+    const existingDay = recordsByDate.get(dateKey);
+
+    if (!existingDay) {
+      recordsByDate.set(dateKey, normalizedDay);
+      return;
+    }
+
+    const existingClosedAt = new Date(existingDay.closedAt).getTime() || 0;
+    const nextClosedAt = new Date(normalizedDay.closedAt).getTime() || 0;
+    const latestDay =
+      nextClosedAt >= existingClosedAt ? normalizedDay : existingDay;
+
+    recordsByDate.set(dateKey, {
+      ...existingDay,
+      ...latestDay,
+      id: existingDay.id,
+      dateKey,
+      completedTasks: mergeTaskSnapshots(
+        existingDay.completedTasks,
+        normalizedDay.completedTasks
+      ),
+      unfinishedTasks: mergeTaskSnapshots(
+        existingDay.unfinishedTasks,
+        normalizedDay.unfinishedTasks
+      ),
+    });
+  });
+
+  return [...recordsByDate.values(), ...recordsWithoutDate].sort((a, b) => {
+    const aTime =
+      new Date(a.closedAt).getTime() ||
+      getLocalDateFromKey(getHistoryDateKey(a))?.getTime() ||
+      0;
+    const bTime =
+      new Date(b.closedAt).getTime() ||
+      getLocalDateFromKey(getHistoryDateKey(b))?.getTime() ||
+      0;
+    return bTime - aTime;
+  });
 }
 
 function formatDateLabel(date) {
@@ -74,7 +189,7 @@ function App() {
   });
 
   const [history, setHistory] = useState(() => {
-    return loadTasks(HISTORY_STORAGE_KEY, []);
+    return normalizeHistory(loadTasks(HISTORY_STORAGE_KEY, []));
   });
 
   const [isCloseDayModalOpen, setIsCloseDayModalOpen] = useState(false);
@@ -94,7 +209,7 @@ function App() {
   }
 
   function markTodayAsActiveDate() {
-    localStorage.setItem(LAST_ACTIVE_DATE_KEY, getDateKey(new Date()));
+    localStorage.setItem(LAST_ACTIVE_DATE_KEY, getLocalDateKey(new Date()));
   }
 
   function addTask(category, status, taskData) {
@@ -241,7 +356,7 @@ function App() {
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
 
-    const fileDate = getDateKey(now);
+    const fileDate = getLocalDateKey(now);
     const link = document.createElement("a");
     link.href = url;
     link.download = `daily-desk-backup-${fileDate}.json`;
@@ -273,7 +388,7 @@ function App() {
         if (!confirmed) return;
 
         const importedTasks = normalizeTasks(parsedData.tasks);
-        const importedHistory = parsedData.history;
+        const importedHistory = normalizeHistory(parsedData.history);
 
         updateTasks(importedTasks);
         updateHistory(importedHistory);
@@ -331,14 +446,26 @@ function App() {
 
   function moveUnfinishedTodayTasksToBacklog() {
     const now = new Date();
+    const storedActiveDate = normalizeDateKey(
+      localStorage.getItem(LAST_ACTIVE_DATE_KEY)
+    );
+    const closingDateKey =
+      closeDayMode === "auto" && storedActiveDate
+        ? storedActiveDate
+        : getLocalDateKey(now);
+    const closingDate = getLocalDateFromKey(closingDateKey) || now;
 
-    const completedSnapshot = completedTasks.map((task) => ({
-      id: task.id,
-      text: task.text,
-      category: task.category,
-      priority: task.priority,
-      completedAt: task.completedAt,
-    }));
+    const completedSnapshot = completedTasks
+      .filter(
+        (task) => normalizeDateKey(task.completedAt) === closingDateKey
+      )
+      .map((task) => ({
+        id: task.id,
+        text: task.text,
+        category: task.category,
+        priority: task.priority,
+        completedAt: task.completedAt,
+      }));
 
     const unfinishedSnapshot = unfinishedTodayTasks.map((task) => ({
       id: task.id,
@@ -348,16 +475,31 @@ function App() {
       createdAt: task.createdAt,
     }));
 
+    const sameDayRecords = history.filter(
+      (day) => getHistoryDateKey(day) === closingDateKey
+    );
+    const existingDay = sameDayRecords[0];
     const daySummary = {
-      id: crypto.randomUUID(),
+      ...existingDay,
+      id: existingDay?.id || crypto.randomUUID(),
+      dateKey: closingDateKey,
       closedAt: now.toISOString(),
-      dateLabel: formatDateLabel(now),
+      dateLabel: formatDateLabel(closingDate),
       closedAtLabel: formatTimeLabel(now),
-      completedTasks: completedSnapshot,
-      unfinishedTasks: unfinishedSnapshot,
+      completedTasks: mergeTaskSnapshots(
+        ...sameDayRecords.map((day) => day.completedTasks || []),
+        completedSnapshot
+      ),
+      unfinishedTasks: mergeTaskSnapshots(
+        ...sameDayRecords.map((day) => day.unfinishedTasks || []),
+        unfinishedSnapshot
+      ),
     };
 
-    const nextHistory = [daySummary, ...history];
+    const nextHistory = [
+      daySummary,
+      ...history.filter((day) => getHistoryDateKey(day) !== closingDateKey),
+    ];
 
     const nextTasks = tasks.map((task) =>
       task.status === "today" && !task.completed
@@ -388,6 +530,20 @@ function App() {
         .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt)),
     [tasks]
   );
+
+  const completedTasksForClosing = (() => {
+    const storedActiveDate = normalizeDateKey(
+      localStorage.getItem(LAST_ACTIVE_DATE_KEY)
+    );
+    const closingDateKey =
+      closeDayMode === "auto" && storedActiveDate
+        ? storedActiveDate
+        : getLocalDateKey(new Date());
+
+    return completedTasks.filter(
+      (task) => normalizeDateKey(task.completedAt) === closingDateKey
+    );
+  })();
 
   const unfinishedTodayTasks = useMemo(
     () => tasks.filter((task) => task.status === "today" && !task.completed),
@@ -462,16 +618,23 @@ function App() {
   }, [tasks]);
 
   useEffect(() => {
-    const todayKey = getDateKey(new Date());
-    const lastActiveDate = localStorage.getItem(LAST_ACTIVE_DATE_KEY);
+    const todayKey = getLocalDateKey(new Date());
+    const lastActiveDate = normalizeDateKey(
+      localStorage.getItem(LAST_ACTIVE_DATE_KEY)
+    );
 
     if (!lastActiveDate) {
       localStorage.setItem(LAST_ACTIVE_DATE_KEY, todayKey);
       return;
     }
 
+    const hasCompletedTasksForActiveDate = tasks.some(
+      (task) =>
+        task.completed &&
+        normalizeDateKey(task.completedAt) === lastActiveDate
+    );
     const hasOpenDailyState =
-      completedTasks.length > 0 || unfinishedTodayTasks.length > 0;
+      hasCompletedTasksForActiveDate || unfinishedTodayTasks.length > 0;
 
     if (lastActiveDate !== todayKey && hasOpenDailyState) {
       openCloseDayModal("auto");
@@ -481,7 +644,7 @@ function App() {
     if (lastActiveDate !== todayKey && !hasOpenDailyState) {
       localStorage.setItem(LAST_ACTIVE_DATE_KEY, todayKey);
     }
-  }, [completedTasks.length, unfinishedTodayTasks.length]);
+  }, [tasks, unfinishedTodayTasks.length]);
 
   return (
     <main className="app-shell">
@@ -524,7 +687,7 @@ function App() {
       {isCloseDayModalOpen && (
         <CloseDayModal
           mode={closeDayMode}
-          completedTasks={completedTasks}
+          completedTasks={completedTasksForClosing}
           unfinishedTodayTasks={unfinishedTodayTasks}
           onClose={closeCloseDayModal}
           onMoveUnfinishedToBacklog={moveUnfinishedTodayTasksToBacklog}

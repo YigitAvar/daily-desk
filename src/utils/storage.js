@@ -1,12 +1,20 @@
-﻿export function loadTasks(storageKey, fallbackTasks) {
+export function loadTasks(storageKey, fallbackTasks) {
   try {
     const savedTasks = localStorage.getItem(storageKey);
-    return savedTasks ? JSON.parse(savedTasks) : fallbackTasks;
+    if (!savedTasks) return fallbackTasks;
+
+    const parsedTasks = JSON.parse(savedTasks);
+    return Array.isArray(parsedTasks) ? parsedTasks : fallbackTasks;
   } catch {
     return fallbackTasks;
   }
 }
 
 export function saveTasks(storageKey, tasks) {
-  localStorage.setItem(storageKey, JSON.stringify(tasks));
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(tasks));
+    return true;
+  } catch {
+    return false;
+  }
 }

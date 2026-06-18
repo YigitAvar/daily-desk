@@ -1,7 +1,11 @@
 import { useMemo, useState } from "react";
+import {
+  getHistoryDateKey,
+  getLocalDateFromKey,
+  getLocalDateKey,
+} from "../utils/date";
 
 const HEATMAP_WEEK_COUNT = 12;
-const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 function getTaskAreaCounts(tasks = []) {
   return tasks.reduce(
@@ -18,19 +22,6 @@ function getTaskAreaCounts(tasks = []) {
   );
 }
 
-function getLocalDateKey(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-function getHistoryDateKey(day) {
-  const date = new Date(day.closedAt);
-  return Number.isNaN(date.getTime()) ? null : getLocalDateKey(date);
-}
-
 function getContributionLevel(count) {
   if (count === 0) return 0;
   if (count <= 2) return 1;
@@ -42,11 +33,14 @@ function getContributionLevel(count) {
 function buildHeatmap(history) {
   const completedByDate = history.reduce((counts, day) => {
     const dateKey = getHistoryDateKey(day);
+    const completedTasks = Array.isArray(day?.completedTasks)
+      ? day.completedTasks
+      : [];
 
     if (dateKey) {
       counts.set(
         dateKey,
-        (counts.get(dateKey) || 0) + (day.completedTasks?.length || 0)
+        (counts.get(dateKey) || 0) + completedTasks.length
       );
     }
 
@@ -64,9 +58,8 @@ function buildHeatmap(history) {
 
   return Array.from({ length: HEATMAP_WEEK_COUNT }, (_, weekIndex) =>
     Array.from({ length: 7 }, (_, dayIndex) => {
-      const date = new Date(
-        startDate.getTime() + (weekIndex * 7 + dayIndex) * DAY_IN_MS
-      );
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + weekIndex * 7 + dayIndex);
       const dateKey = getLocalDateKey(date);
       const count = date > today ? 0 : completedByDate.get(dateKey) || 0;
 
@@ -86,6 +79,13 @@ function buildHeatmap(history) {
 
 function HistoryModal({ history, onClose, onClearHistory }) {
   const [expandedDayId, setExpandedDayId] = useState(null);
+  const safeHistory = useMemo(
+    () =>
+      Array.isArray(history)
+        ? history.filter((day) => day && typeof day === "object")
+        : [],
+    [history]
+  );
 
   const summary = useMemo(() => {
     const today = new Date();
@@ -94,21 +94,24 @@ function HistoryModal({ history, onClose, onClearHistory }) {
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(today.getDate() - 6);
 
-    return history.reduce(
+    return safeHistory.reduce(
       (totals, day) => {
-        const completedTasks = day.completedTasks || [];
-        const unfinishedTasks = day.unfinishedTasks || [];
+        const completedTasks = Array.isArray(day.completedTasks)
+          ? day.completedTasks
+          : [];
+        const unfinishedTasks = Array.isArray(day.unfinishedTasks)
+          ? day.unfinishedTasks
+          : [];
         const completedCounts = getTaskAreaCounts(completedTasks);
-        const closedAt = new Date(day.closedAt);
-        const closedDay = new Date(closedAt);
-        closedDay.setHours(0, 0, 0, 0);
+        const dateKey = getHistoryDateKey(day);
+        const closedDay = getLocalDateFromKey(dateKey);
 
         totals.completedTotal += completedTasks.length;
         totals.movedTotal += unfinishedTasks.length;
         totals.workCompleted += completedCounts.work;
         totals.personalCompleted += completedCounts.personal;
 
-        if (!Number.isNaN(closedAt.getTime())) {
+        if (closedDay) {
           if (closedDay.getTime() === today.getTime()) {
             totals.completedToday += completedTasks.length;
           }
@@ -129,9 +132,9 @@ function HistoryModal({ history, onClose, onClearHistory }) {
         personalCompleted: 0,
       }
     );
-  }, [history]);
+  }, [safeHistory]);
 
-  const heatmapWeeks = useMemo(() => buildHeatmap(history), [history]);
+  const heatmapWeeks = useMemo(() => buildHeatmap(safeHistory), [safeHistory]);
 
   function toggleDay(dayId) {
     setExpandedDayId((currentDayId) =>
@@ -227,18 +230,22 @@ function HistoryModal({ history, onClose, onClearHistory }) {
         <div className="history-feed-heading">
           <div>
             <h3>Gün özetleri</h3>
-            <p>{history.length} kapanış kaydı</p>
+            <p>{safeHistory.length} kapanış kaydı</p>
           </div>
           <span>{summary.movedTotal} görev Backlog&apos;a taşındı</span>
         </div>
 
-        {history.length === 0 ? (
+        {safeHistory.length === 0 ? (
           <div className="review-empty">Henüz günlük özet kaydı yok.</div>
         ) : (
           <div className="history-list compact-history-list">
-            {history.map((day) => {
-              const completedTasks = day.completedTasks || [];
-              const unfinishedTasks = day.unfinishedTasks || [];
+            {safeHistory.map((day, dayIndex) => {
+              const completedTasks = Array.isArray(day.completedTasks)
+                ? day.completedTasks
+                : [];
+              const unfinishedTasks = Array.isArray(day.unfinishedTasks)
+                ? day.unfinishedTasks
+                : [];
               const isExpanded = expandedDayId === day.id;
               const completedCounts = getTaskAreaCounts(completedTasks);
               const movedCounts = getTaskAreaCounts(unfinishedTasks);
@@ -249,7 +256,10 @@ function HistoryModal({ history, onClose, onClearHistory }) {
                   : 50;
 
               return (
-                <article className="history-card compact-history-card" key={day.id}>
+                <article
+                  className="history-card compact-history-card"
+                  key={day.id || getHistoryDateKey(day) || dayIndex}
+                >
                   <div className="history-card-header">
                     <div>
                       <span className="history-date">{day.dateLabel}</span>
@@ -352,7 +362,7 @@ function HistoryModal({ history, onClose, onClearHistory }) {
           <button
             className="danger-modal-action"
             onClick={onClearHistory}
-            disabled={history.length === 0}
+            disabled={safeHistory.length === 0}
           >
             Geçmişi Temizle
           </button>
