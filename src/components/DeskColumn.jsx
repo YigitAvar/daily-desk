@@ -233,7 +233,7 @@ function DeskColumn({
   function confirmLargeTask() {
     if (!pendingLargeTask) return;
 
-    addValidatedTask(pendingLargeTask.text, pendingLargeTask.priority);
+    addValidatedTask(pendingLargeTask.text, pendingLargeTask.priority, true);
     setPendingLargeTask(null);
   }
 
