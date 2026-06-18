@@ -60,12 +60,17 @@ button {
 }
 
 button:focus,
-button:focus-visible,
 input:focus,
-input:focus-visible,
-select:focus,
-select:focus-visible {
+select:focus {
   outline: none;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+.import-button:focus-within {
+  outline: 3px solid rgba(217, 199, 163, 0.72);
+  outline-offset: 3px;
 }
 
 h1,
@@ -142,6 +147,7 @@ h1 {
   position: relative;
   isolation: isolate;
   overflow: hidden;
+  min-width: 0;
   min-height: 680px;
   border: 1px solid rgba(244, 241, 234, 0.12);
   border-radius: 28px;
@@ -298,10 +304,14 @@ h1 {
 }
 
 .priority-option:focus,
-.priority-option:focus-visible,
 .priority-option:active {
   outline: none;
   box-shadow: none;
+}
+
+.priority-option:focus-visible {
+  outline: 3px solid rgba(217, 199, 163, 0.72);
+  outline-offset: 3px;
 }
 
 .priority-option.low {
@@ -438,6 +448,7 @@ h1 {
 }
 
 .compact-task-content {
+  min-width: 0;
   display: grid;
   gap: 7px;
 }
@@ -447,6 +458,7 @@ h1 {
   color: var(--text-main);
   font-size: 15px;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .compact-task-actions,
@@ -630,6 +642,35 @@ h1 {
   .compact-task-actions {
     grid-column: 2;
     justify-content: flex-start;
+  }
+}
+
+@media (max-width: 420px) {
+  .app-shell {
+    width: min(100% - 16px, 1280px);
+  }
+
+  .desk-column {
+    border-radius: 22px;
+    padding: 16px;
+  }
+
+  .priority-picker {
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .priority-option {
+    padding: 0 8px;
+  }
+
+  .modal-backdrop {
+    padding: 12px;
+  }
+
+  .close-day-modal {
+    border-radius: 22px;
+    padding: 18px;
   }
 }
 

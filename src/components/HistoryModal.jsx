@@ -236,7 +236,9 @@ function HistoryModal({ history, onClose, onClearHistory }) {
         </div>
 
         {safeHistory.length === 0 ? (
-          <div className="review-empty">Henüz günlük özet kaydı yok.</div>
+          <div className="review-empty">
+            Henüz gün özeti yok. İlk kayıt, günü kapattığında burada görünür.
+          </div>
         ) : (
           <div className="history-list compact-history-list">
             {safeHistory.map((day, dayIndex) => {

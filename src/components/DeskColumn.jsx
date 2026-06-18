@@ -314,7 +314,7 @@ function DeskColumn({
             <button
               className="check-button"
               onClick={() => onCompleteTask(task.id)}
-              aria-label="Complete task"
+              aria-label="Görevi tamamla"
             >
               ✓
             </button>
@@ -340,11 +340,11 @@ function DeskColumn({
 
               {source === "today" ? (
                 <button onClick={() => onMoveTask(task.id, "backlog")}>
-                  Backlog
+                  Backlog&apos;a Al
                 </button>
               ) : (
                 <button onClick={() => onMoveTask(task.id, "today")}>
-                  Today
+                  Today&apos;e Al
                 </button>
               )}
 
@@ -416,7 +416,9 @@ function DeskColumn({
 
         <div className="compact-task-list">
           {todayTasks.length === 0 ? (
-            <div className="small-empty-state">Bugün için görev yok.</div>
+            <div className="small-empty-state">
+              Bugün için görev yok. Yukarıdan bir görev ekleyebilirsin.
+            </div>
           ) : (
             todayTasks.map((task) => renderTask(task, "today"))
           )}
@@ -435,7 +437,9 @@ function DeskColumn({
         {showBacklog && (
           <div className="compact-task-list">
             {backlogTasks.length === 0 ? (
-              <div className="small-empty-state">Backlog boş.</div>
+              <div className="small-empty-state">
+                Backlog boş. Ertelediğin görevler burada görünür.
+              </div>
             ) : (
               backlogTasks.map((task) => renderTask(task, "backlog"))
             )}
@@ -462,7 +466,7 @@ function DeskColumn({
                 className="danger-action"
                 onClick={() => onClearCompletedTasks(category)}
               >
-                Temizle
+                Çizilenleri Temizle
               </button>
             </div>
           </div>
