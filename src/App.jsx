@@ -523,13 +523,9 @@ function App() {
     [tasks]
   );
 
-  const completedTasks = useMemo(
-    () =>
-      tasks
-        .filter((task) => task.completed)
-        .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt)),
-    [tasks]
-  );
+  const completedTasks = tasks
+    .filter((task) => task.completed)
+    .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
 
   const completedTasksForClosing = (() => {
     const storedActiveDate = normalizeDateKey(
@@ -545,9 +541,8 @@ function App() {
     );
   })();
 
-  const unfinishedTodayTasks = useMemo(
-    () => tasks.filter((task) => task.status === "today" && !task.completed),
-    [tasks]
+  const unfinishedTodayTasks = tasks.filter(
+    (task) => task.status === "today" && !task.completed
   );
 
   const notifications = useMemo(() => {
@@ -637,8 +632,11 @@ function App() {
       hasCompletedTasksForActiveDate || unfinishedTodayTasks.length > 0;
 
     if (lastActiveDate !== todayKey && hasOpenDailyState) {
-      openCloseDayModal("auto");
-      return;
+      const openModalTimeout = window.setTimeout(() => {
+        openCloseDayModal("auto");
+      }, 0);
+
+      return () => window.clearTimeout(openModalTimeout);
     }
 
     if (lastActiveDate !== todayKey && !hasOpenDailyState) {
