@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { initialTasks } from "./data/initialTasks";
 import { loadTasks, saveTasks, saveValue, restoreValue } from "./utils/storage";
 import { getDaysWaiting, isLargeTask } from "./utils/tasks";
@@ -191,6 +191,8 @@ function App() {
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
   const [closeDayMode, setCloseDayMode] = useState("manual");
   const [hasSaveError, setHasSaveError] = useState(false);
+  const [recentlyDeleted, setRecentlyDeleted] = useState(null);
+  const undoTimerRef = useRef(null);
 
   function updateTasks(nextTasks) {
     if (!saveTasks(TASKS_STORAGE_KEY, nextTasks)) {
@@ -270,8 +272,44 @@ function App() {
   }
 
   function deleteTask(taskId) {
+    const index = tasks.findIndex((task) => task.id === taskId);
+    if (index === -1) return;
+
+    const removedTask = tasks[index];
     const nextTasks = tasks.filter((task) => task.id !== taskId);
-    updateTasks(nextTasks);
+
+    if (!updateTasks(nextTasks)) return;
+
+    if (undoTimerRef.current) {
+      window.clearTimeout(undoTimerRef.current);
+    }
+
+    setRecentlyDeleted({ task: removedTask, index });
+    undoTimerRef.current = window.setTimeout(() => {
+      setRecentlyDeleted(null);
+      undoTimerRef.current = null;
+    }, 5000);
+  }
+
+  function undoDelete() {
+    if (!recentlyDeleted) return;
+
+    if (undoTimerRef.current) {
+      window.clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = null;
+    }
+
+    const { task, index } = recentlyDeleted;
+    const insertAt = Math.min(Math.max(index, 0), tasks.length);
+    const nextTasks = [
+      ...tasks.slice(0, insertAt),
+      task,
+      ...tasks.slice(insertAt),
+    ];
+
+    if (updateTasks(nextTasks)) {
+      setRecentlyDeleted(null);
+    }
   }
 
   function clearCompletedTasks(category) {
@@ -764,6 +802,19 @@ function App() {
           notifications={notifications}
           onClose={closeNotificationsModal}
         />
+      )}
+
+      {recentlyDeleted && (
+        <div className="undo-toast" role="status">
+          <span>Görev silindi</span>
+          <button
+            type="button"
+            className="undo-toast-button"
+            onClick={undoDelete}
+          >
+            Geri Al
+          </button>
+        </div>
       )}
     </main>
   );
