@@ -95,6 +95,22 @@ function DeskColumn({
   const [showAllCompleted, setShowAllCompleted] = useState(false);
   const [formMessage, setFormMessage] = useState(null);
   const [pendingLargeTask, setPendingLargeTask] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const normalizedSearchQuery = normalizeText(searchQuery).toLocaleLowerCase(
+    "tr-TR"
+  );
+  const isSearching = normalizedSearchQuery.length > 0;
+
+  function taskMatchesSearch(task) {
+    if (!isSearching) return true;
+
+    return task.text
+      .trim()
+      .replace(/\s+/g, " ")
+      .toLocaleLowerCase("tr-TR")
+      .includes(normalizedSearchQuery);
+  }
 
   const todayTasks = useMemo(
     () => tasks.filter((task) => task.status === "today" && !task.completed),
@@ -117,9 +133,13 @@ function DeskColumn({
     [tasks]
   );
 
+  const filteredTodayTasks = todayTasks.filter(taskMatchesSearch);
+  const filteredBacklogTasks = backlogTasks.filter(taskMatchesSearch);
+  const filteredCompletedTasks = completedTasks.filter(taskMatchesSearch);
+
   const visibleCompletedTasks = showAllCompleted
-    ? completedTasks
-    : completedTasks.slice(0, 2);
+    ? filteredCompletedTasks
+    : filteredCompletedTasks.slice(0, 2);
 
   const highPriorityCount = useMemo(
     () => todayTasks.filter((task) => task.priority === "high").length,
@@ -388,6 +408,23 @@ function DeskColumn({
         <button type="submit">Ekle</button>
       </form>
 
+      <div className="task-search">
+        <input
+          type="search"
+          className="task-search-input"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" || event.key === "Esc") {
+              event.preventDefault();
+              setSearchQuery("");
+            }
+          }}
+          placeholder="Görevlerde ara..."
+          aria-label="Görevlerde ara"
+        />
+      </div>
+
       {formMessage && (
         <div className={`form-message ${formMessage.type}`}>
           {formMessage.text}
@@ -416,12 +453,14 @@ function DeskColumn({
         </div>
 
         <div className="compact-task-list">
-          {todayTasks.length === 0 ? (
+          {filteredTodayTasks.length === 0 ? (
             <div className="small-empty-state">
-              Bugün için görev yok. Yukarıdan bir görev ekleyebilirsin.
+              {isSearching
+                ? "Aramayla eşleşen görev yok."
+                : "Bugün için görev yok. Yukarıdan bir görev ekleyebilirsin."}
             </div>
           ) : (
-            todayTasks.map((task) => renderTask(task, "today"))
+            filteredTodayTasks.map((task) => renderTask(task, "today"))
           )}
         </div>
       </div>
@@ -437,12 +476,14 @@ function DeskColumn({
 
         {showBacklog && (
           <div className="compact-task-list">
-            {backlogTasks.length === 0 ? (
+            {filteredBacklogTasks.length === 0 ? (
               <div className="small-empty-state">
-                Backlog boş. Ertelediğin görevler burada görünür.
+                {isSearching
+                  ? "Aramayla eşleşen görev yok."
+                  : "Backlog boş. Ertelediğin görevler burada görünür."}
               </div>
             ) : (
-              backlogTasks.map((task) => renderTask(task, "backlog"))
+              filteredBacklogTasks.map((task) => renderTask(task, "backlog"))
             )}
           </div>
         )}
@@ -457,7 +498,7 @@ function DeskColumn({
             </div>
 
             <div className="completed-actions">
-              {completedTasks.length > 2 && (
+              {filteredCompletedTasks.length > 2 && (
                 <button onClick={() => setShowAllCompleted((current) => !current)}>
                   {showAllCompleted ? "Daha Az" : "Tümünü Göster"}
                 </button>
@@ -473,18 +514,24 @@ function DeskColumn({
           </div>
 
           <div className="compact-task-list">
-            {visibleCompletedTasks.map((task) => (
-              <article className="compact-task-card completed" key={task.id}>
-                <div>
-                  <p>{task.text}</p>
-                  <span className={`badge priority-badge ${task.priority}`}>
-                    {getPriorityLabel(task.priority)}
-                  </span>
-                </div>
+            {isSearching && filteredCompletedTasks.length === 0 ? (
+              <div className="small-empty-state">
+                Aramayla eşleşen görev yok.
+              </div>
+            ) : (
+              visibleCompletedTasks.map((task) => (
+                <article className="compact-task-card completed" key={task.id}>
+                  <div>
+                    <p>{task.text}</p>
+                    <span className={`badge priority-badge ${task.priority}`}>
+                      {getPriorityLabel(task.priority)}
+                    </span>
+                  </div>
 
-                <button onClick={() => onDeleteTask(task.id)}>Sil</button>
-              </article>
-            ))}
+                  <button onClick={() => onDeleteTask(task.id)}>Sil</button>
+                </article>
+              ))
+            )}
           </div>
         </div>
       )}

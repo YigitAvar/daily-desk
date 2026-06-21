@@ -325,6 +325,31 @@ h1 {
   font-weight: 900;
 }
 
+/* Task search */
+
+.task-search {
+  margin-bottom: 18px;
+}
+
+.task-search-input {
+  width: 100%;
+  border: 1px solid rgba(244, 241, 234, 0.14);
+  border-radius: 18px;
+  outline: none;
+  padding: 12px 16px;
+  background: var(--bg-input);
+  color: var(--text-main);
+}
+
+.task-search-input::placeholder {
+  color: #7d766a;
+}
+
+.task-search-input:focus {
+  border-color: rgba(244, 241, 234, 0.32);
+  box-shadow: 0 0 0 3px rgba(244, 241, 234, 0.04);
+}
+
 /* Priority picker */
 
 .priority-picker {
