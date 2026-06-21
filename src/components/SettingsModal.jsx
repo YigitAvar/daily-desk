@@ -1,7 +1,16 @@
-﻿function SettingsModal({
+﻿const THEME_OPTIONS = [
+  { value: "default", label: "Varsayılan" },
+  { value: "midnight", label: "Gece" },
+  { value: "forest", label: "Orman" },
+  { value: "warm", label: "Sıcak" },
+];
+
+function SettingsModal({
   taskCount,
   completedCount,
   historyCount,
+  theme,
+  onChangeTheme,
   onClose,
   onClearAllTasks,
   onClearCompletedTasks,
@@ -23,6 +32,23 @@
           <button className="modal-close-button" onClick={onClose}>
             ×
           </button>
+        </div>
+
+        <div className="theme-picker" role="group" aria-label="Tema seçimi">
+          <p className="theme-picker-label">Tema</p>
+          {THEME_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={
+                theme === option.value ? "theme-option active" : "theme-option"
+              }
+              aria-pressed={theme === option.value}
+              onClick={() => onChangeTheme(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
 
         <div className="settings-grid">

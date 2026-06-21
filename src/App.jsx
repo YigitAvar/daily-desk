@@ -18,6 +18,17 @@ import NotificationsModal from "./components/NotificationsModal";
 const TASKS_STORAGE_KEY = "daily-desk-tasks";
 const HISTORY_STORAGE_KEY = "daily-desk-history";
 const LAST_ACTIVE_DATE_KEY = "daily-desk-last-active-date";
+const THEME_STORAGE_KEY = "daily-desk-theme";
+const VALID_THEMES = ["default", "midnight", "forest", "warm"];
+
+function loadTheme() {
+  try {
+    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    return VALID_THEMES.includes(savedTheme) ? savedTheme : "default";
+  } catch {
+    return "default";
+  }
+}
 
 function normalizeTasks(tasks) {
   if (!Array.isArray(tasks)) return [];
@@ -193,6 +204,12 @@ function App() {
   const [hasSaveError, setHasSaveError] = useState(false);
   const [recentlyDeleted, setRecentlyDeleted] = useState(null);
   const undoTimerRef = useRef(null);
+  const [theme, setTheme] = useState(loadTheme);
+
+  function changeTheme(nextTheme) {
+    if (!VALID_THEMES.includes(nextTheme)) return;
+    setTheme(nextTheme);
+  }
 
   function updateTasks(nextTasks) {
     if (!saveTasks(TASKS_STORAGE_KEY, nextTasks)) {
@@ -677,6 +694,20 @@ function App() {
   }, [tasks]);
 
   useEffect(() => {
+    const root = document.documentElement;
+
+    if (theme === "default") {
+      root.removeAttribute("data-theme");
+    } else {
+      root.setAttribute("data-theme", theme);
+    }
+
+    // Theme is non-critical: a failed persist must not trigger the data
+    // save-error banner. Soft fail — the theme still applies for this session.
+    saveValue(THEME_STORAGE_KEY, theme);
+  }, [theme]);
+
+  useEffect(() => {
     const todayKey = getLocalDateKey(new Date());
     const lastActiveDate = normalizeDateKey(
       localStorage.getItem(LAST_ACTIVE_DATE_KEY)
@@ -787,6 +818,8 @@ function App() {
           taskCount={tasks.length}
           completedCount={completedTasks.length}
           historyCount={history.length}
+          theme={theme}
+          onChangeTheme={changeTheme}
           onClose={closeSettingsModal}
           onClearAllTasks={clearAllTasksFromSettings}
           onClearCompletedTasks={clearCompletedTasksFromSettings}
