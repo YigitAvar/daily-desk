@@ -279,6 +279,16 @@ function DeskColumn({
             <input
               value={editText}
               onChange={(event) => setEditText(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  saveEditing(task.id);
+                } else if (event.key === "Escape" || event.key === "Esc") {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  cancelEditing();
+                }
+              }}
             />
 
             <div className="compact-edit-actions">
@@ -362,6 +372,14 @@ function DeskColumn({
         <input
           value={taskText}
           onChange={(event) => setTaskText(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+              event.preventDefault();
+              event.currentTarget.form?.requestSubmit();
+            } else if (event.key === "Escape") {
+              setTaskText("");
+            }
+          }}
           placeholder={category === "work" ? "İş görevi yaz..." : "Kişisel görev yaz..."}
         />
 
